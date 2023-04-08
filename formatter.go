@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"runtime"
 	"sort"
@@ -16,7 +15,6 @@ import (
 	"unsafe"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/windows"
 )
 
 type fieldKey string
@@ -119,6 +117,7 @@ type TextFormatter struct {
 
 	// The max length of the level text, generated dynamically on init
 	levelTextMaxLength int
+	NoConsole          bool
 }
 
 // An entry is the final or intermediate Logrus logging entry. It contains all
@@ -156,26 +155,27 @@ type Entry struct {
 
 const defaultTimestampFormat = time.RFC3339
 
-func checkIfTerminal(w io.Writer) bool {
-	switch v := w.(type) {
-	case *os.File:
-		handle := windows.Handle(v.Fd())
-		var mode uint32
-		if err := windows.GetConsoleMode(handle, &mode); err != nil {
-			return false
-		}
-		mode |= windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING
-		if err := windows.SetConsoleMode(handle, mode); err != nil {
-			return false
-		}
-		return true
-	}
-	return false
-}
+// func checkIfTerminal(w io.Writer) bool {
+// 	switch v := w.(type) {
+// 	case *os.File:
+// 		handle := windows.Handle(v.Fd())
+// 		var mode uint32
+// 		if err := windows.GetConsoleMode(handle, &mode); err != nil {
+// 			return false
+// 		}
+// 		mode |= windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING
+// 		if err := windows.SetConsoleMode(handle, mode); err != nil {
+// 			return false
+// 		}
+// 		return true
+// 	}
+// 	return false
+// }
 
 func (f *TextFormatter) init(entry *Entry) {
 	if entry.Logger != nil {
-		f.isTerminal = checkIfTerminal(entry.Logger.Out)
+		//f.isTerminal = checkIfTerminal(entry.Logger.Out)
+		f.isTerminal = !f.NoConsole
 	}
 	// Get the max length of the level text
 	for _, level := range logrus.AllLevels {

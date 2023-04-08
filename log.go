@@ -364,6 +364,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		TimestampFormat: "2006-01-02 15:04:05", //时间格式
 		FullTimestamp:   true,                  //开启时间戳
 		ForceColors:     true,                  //开启颜色
+		NoConsole:       config.NoConsole,
 		// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 		// 	//返回shortfile,funcname,linenum
 		// 	//main.go:main:12
