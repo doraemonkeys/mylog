@@ -2,7 +2,6 @@ package mylog
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -349,13 +348,8 @@ func NewLogger(config LogConfig) (*logrus.Logger, error) {
 }
 
 func initlLog(logger *logrus.Logger, config LogConfig) error {
-	var levelStr = flag.String("loglevel", "", "log level(panic,fatal,error,warn,info,debug,trace)")
-	flag.Parse()
-	if *levelStr == "" {
-		*levelStr = config.LogLevel
-	}
 
-	var level logrus.Level = PraseLevel(*levelStr)
+	var level logrus.Level = PraseLevel(config.LogLevel)
 	//fmt.Println("level:", level)
 
 	logger.SetReportCaller(true) //开启调用者信息
