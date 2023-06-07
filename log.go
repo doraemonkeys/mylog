@@ -376,10 +376,10 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.NoTimestamp {
 		formatter.DisableTimestamp = true
 	}
-	logrus.SetFormatter(formatter)
+	logger.SetFormatter(formatter)
 
 	if config.NoConsole {
-		logrus.SetOutput(io.Discard)
+		logger.SetOutput(io.Discard)
 	}
 
 	if config.LogExt == "" {
