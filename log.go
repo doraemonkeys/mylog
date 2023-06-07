@@ -1,7 +1,6 @@
 package mylog
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -40,6 +39,8 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
+	// 日志最大保留天数(设置后请不要在日志文件夹中放置其他文件，否则可能被删除)
+	MaxKeepDays int
 	//日志扩展名(默认.log)
 	LogExt string
 	//panic,fatal,error,warn,info,debug,trace
@@ -131,41 +132,11 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-// D:\xxx\yyy\yourproject\pkg\log\log.go -> pkg\log\log.go
-func getShortFileName(file string, lineInfo string) string {
-	file = strings.Replace(file, "\\", "/", -1)
-	if strings.Contains(file, "/") {
-		env, _ := os.Getwd()
-		env = strings.Replace(env, "\\", "/", -1)
-		file = strings.Replace(file, env, "", 1)
-		if file[0] == '/' {
-			file = file[1:]
-		}
-		file = file + ":" + lineInfo
-	}
-	return file
-}
-
 func (hook *logHook) Levels() []logrus.Level {
 	//return []logrus.Level{logrus.ErrorLevel}
 
 	//hook全部级别
 	return logrus.AllLevels
-}
-
-// 去除颜色
-func eliminateColor(line []byte) []byte {
-	//"\033[31m 红色 \033[0m"
-	if bytes.Contains(line, []byte("\x1b[0m")) {
-		line = bytes.ReplaceAll(line, []byte("\x1b[0m"), []byte(""))
-
-		index := bytes.Index(line, []byte("\x1b[")) //找到\x1b[的位置
-		for index >= 0 && index+5 < len(line) {
-			line = bytes.ReplaceAll(line, line[index:index+5], []byte("")) //删除\x1b[31m
-			index = bytes.Index(line, []byte("\x1b["))
-		}
-	}
-	return line
 }
 
 // 检查是否需要分割日志
@@ -409,43 +380,40 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if err != nil {
 		return fmt.Errorf("updateNewLogPathAndFile err:%v", err)
 	}
+	if config.MaxKeepDays > 0 {
+		go hook.deleteOldLog()
+	}
 	return nil
 }
 
-// panic,fatal,error,warn,info,debug,trace
-// 默认info
-func PraseLevel(level string) logrus.Level {
-	level = strings.ToLower(level)
-	switch level {
-	case "trace":
-		return logrus.TraceLevel
-	case "debug":
-		return logrus.DebugLevel
-	case "info":
-		return logrus.InfoLevel
-	case "warn":
-		return logrus.WarnLevel
-	case "error":
-		return logrus.ErrorLevel
-	case "fatal":
-		return logrus.FatalLevel
-	case "panic":
-		return logrus.PanicLevel
-	default:
-		return logrus.InfoLevel
+func (hook *logHook) deleteOldLog() {
+	for {
+		hook.deleteOldLogOnce()
+		time.Sleep(time.Hour * 24)
 	}
 }
 
-// 替换文件名中的非法字符为下划线
-func makeFileNameLegal(s string) string {
-	s = strings.ReplaceAll(s, "/", "_")
-	s = strings.ReplaceAll(s, "\\", "_")
-	s = strings.ReplaceAll(s, ":", "_")
-	s = strings.ReplaceAll(s, "*", "_")
-	s = strings.ReplaceAll(s, "?", "_")
-	s = strings.ReplaceAll(s, "\"", "_")
-	s = strings.ReplaceAll(s, "<", "_")
-	s = strings.ReplaceAll(s, ">", "_")
-	s = strings.ReplaceAll(s, "|", "_")
-	return s
+// 删除过期日志
+func (hook *logHook) deleteOldLogOnce() {
+	if hook.LogConfig.MaxKeepDays == 0 {
+		return
+	}
+	dirs, err := getFolderNamesInPath(hook.LogConfig.LogPath)
+	if err != nil {
+		logrus.Errorf("deleteOldLog getDirs err:%v", err)
+		return
+	}
+	for _, dir := range dirs {
+		date, err := time.Parse(hook.dateFmt, filepath.Base(dir))
+		if err != nil {
+			logrus.Errorf("deleteOldLog time.Parse err:%v", err)
+			continue
+		}
+		if time.Since(date).Hours() > float64(hook.LogConfig.MaxKeepDays*24) {
+			err = os.RemoveAll(filepath.Join(hook.LogConfig.LogPath, dir))
+			if err != nil {
+				logrus.Errorf("deleteOldLog os.RemoveAll err:%v", err)
+			}
+		}
+	}
 }
