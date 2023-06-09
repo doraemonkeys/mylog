@@ -296,10 +296,11 @@ func (hook *logHook) deleteOldLogFileOnce(dir string) {
 		return
 	}
 	for _, fileName := range files {
-		if hook.ErrWriter != nil && fileName == hook.ErrWriter.Name() {
+		fileName = strings.ToLower(fileName)
+		if hook.ErrWriter != nil && fileName == strings.ToLower(hook.ErrWriter.Name()) {
 			continue
 		}
-		if hook.OtherWriter != nil && fileName == hook.OtherWriter.Name() {
+		if hook.OtherWriter != nil && fileName == strings.ToLower(hook.OtherWriter.Name()) {
 			continue
 		}
 		// 最后修改时间
