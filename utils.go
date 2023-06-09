@@ -102,3 +102,26 @@ func getFolderNamesInPath(path string) ([]string, error) {
 	}
 	return dirs, nil
 }
+
+// 获取path下所有文件名称(含后缀)
+func getFileNmaesInPath(path string) ([]string, error) {
+	DirEntry, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, v := range DirEntry {
+		if !v.IsDir() {
+			files = append(files, v.Name())
+		}
+	}
+	return files, nil
+}
+func isEmptyDir(dir string) bool {
+	DirEntry, err := os.ReadDir(dir)
+	if err != nil {
+		logrus.Errorf("isEmptyDir os.ReadDir err:%v", err)
+		return false
+	}
+	return len(DirEntry) == 0
+}
