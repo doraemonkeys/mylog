@@ -71,7 +71,7 @@ type logHook struct {
 	LogSize int64
 	// 2006_01_02
 	dateFmt string
-	// 2006_01_02_030405(按大小分割时使用)
+	// 2006_01_02_150405(按大小分割时使用)
 	dateFmt2 string
 }
 
@@ -141,7 +141,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 
 	hook := &logHook{}
 	hook.dateFmt = "2006_01_02"
-	hook.dateFmt2 = "2006_01_02_030405"
+	hook.dateFmt2 = "2006_01_02_150405"
 	hook.FileDate = time.Now().In(config.TimeLocation).Format(hook.dateFmt)
 	hook.LogSize = 0
 	hook.WriterLock = &sync.RWMutex{}

@@ -167,7 +167,7 @@ func (hook *logHook) updateNewLogPathAndFile() error {
 	}
 	//按大小分割
 	if hook.LogConfig.MaxLogSize > 0 {
-		//按大小分割时，文件名格式为 2006_01_02_030405
+		//按大小分割时，文件名格式为 2006_01_02_150405
 		tempFileName = time.Now().In(hook.LogConfig.TimeLocation).Format(hook.dateFmt2)
 	}
 	//按日期分割
