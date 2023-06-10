@@ -49,6 +49,8 @@ type LogConfig struct {
 	key string
 	//在每条log末尾添加key-value
 	value interface{}
+	// 标记不被删除的日志文件名需要含有的后缀
+	keepSuffix string
 }
 
 // 在每条log末尾添加key-value
@@ -135,6 +137,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.DefaultLogName == "" {
 		config.DefaultLogName = "DEFAULT"
 	}
+	config.keepSuffix = "KEEP"
 
 	hook := &logHook{}
 	hook.dateFmt = "2006_01_02"

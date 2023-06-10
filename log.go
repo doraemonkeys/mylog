@@ -268,6 +268,9 @@ func (hook *logHook) deleteOldLogDirOnce(dir string) {
 		return
 	}
 	for _, dir := range dirs {
+		if strings.HasSuffix(dir, hook.LogConfig.keepSuffix) {
+			continue
+		}
 		date, err := time.Parse(hook.dateFmt, dir)
 		if err != nil {
 			logrus.Errorf("deleteOldLog time.Parse err:%v", err)
@@ -296,6 +299,9 @@ func (hook *logHook) deleteOldLogFileOnce(dir string) {
 		return
 	}
 	for _, fileName := range files {
+		if strings.HasSuffix(fileName, hook.LogConfig.keepSuffix) {
+			continue
+		}
 		fileName = strings.ToLower(fileName)
 		if hook.ErrWriter != nil && fileName == strings.ToLower(hook.ErrWriter.Name()) {
 			continue
