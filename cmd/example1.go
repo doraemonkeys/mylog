@@ -27,7 +27,8 @@ func init() {
 		//NoFile: true, //不输出到文件
 		//NoConsole: true, //不输出到控制台
 		//NoTimestamp: true, //不显示时间戳
-		MaxKeepDays: 10,
+		//DisableCaller: true, //关闭调用者信息
+		MaxKeepDays: 1,
 	}
 	config.SetKeyValue("server", "[DEBUG]")
 	err := mylog.InitGlobalLogger(config)
