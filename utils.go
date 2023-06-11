@@ -120,7 +120,7 @@ func getFileNmaesInPath(path string) ([]string, error) {
 func isEmptyDir(dir string) bool {
 	DirEntry, err := os.ReadDir(dir)
 	if err != nil {
-		logrus.Errorf("isEmptyDir os.ReadDir err:%v", err)
+		logrus.Errorf("dir empty check error:%v", err)
 		return false
 	}
 	return len(DirEntry) == 0
