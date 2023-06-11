@@ -35,6 +35,8 @@ type LogConfig struct {
 	ShowShortFileInConsole bool
 	//在控制台输出func
 	ShowFuncInConsole bool
+	// 关闭调用者信息
+	DisableCaller bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数(设置后请不要在日志文件夹中放置其他文件，否则可能被删除)
@@ -95,8 +97,11 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	var level logrus.Level = PraseLevel(config.LogLevel)
 	//fmt.Println("level:", level)
 
-	logger.SetReportCaller(true) //开启调用者信息
-	logger.SetLevel(level)       //设置最低的Level
+	if !config.DisableCaller {
+		logger.SetReportCaller(true) //开启调用者信息
+	}
+
+	logger.SetLevel(level) //设置最低的Level
 	formatter := &TextFormatter{
 		TimestampFormat: "2006-01-02 15:04:05", //时间格式
 		FullTimestamp:   true,                  //开启时间戳

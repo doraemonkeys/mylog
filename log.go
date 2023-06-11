@@ -15,17 +15,21 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	if hook.LogConfig.key != "" {
 		entry.Data[hook.LogConfig.key] = hook.LogConfig.value
 	}
-	file := entry.Caller.File
-	file = getShortFileName(file, fmt.Sprint(entry.Caller.Line))
-	entry.Data["FILE"] = file
-	entry.Data["FUNC"] = entry.Caller.Function[strings.LastIndex(entry.Caller.Function, ".")+1:]
 
-	if !hook.LogConfig.ShowShortFileInConsole {
-		defer delete(entry.Data, "FILE")
+	if !hook.LogConfig.DisableCaller {
+		file := entry.Caller.File
+		file = getShortFileName(file, fmt.Sprint(entry.Caller.Line))
+		entry.Data["FILE"] = file
+		entry.Data["FUNC"] = entry.Caller.Function[strings.LastIndex(entry.Caller.Function, ".")+1:]
+
+		if !hook.LogConfig.ShowShortFileInConsole {
+			defer delete(entry.Data, "FILE")
+		}
+		if !hook.LogConfig.ShowFuncInConsole {
+			defer delete(entry.Data, "FUNC")
+		}
 	}
-	if !hook.LogConfig.ShowFuncInConsole {
-		defer delete(entry.Data, "FUNC")
-	}
+
 	// 为debug级别的日志添加颜色
 	// if entry.Level == logrus.DebugLevel {
 	// 	defer func() {
@@ -277,10 +281,11 @@ func (hook *logHook) deleteOldLogDirOnce(dir string) {
 			continue
 		}
 		if time.Since(date).Hours() > float64(hook.LogConfig.MaxKeepDays*24) {
-			hook.deleteOldLogFileOnce(filepath.Join(hook.LogConfig.LogPath, dir))
+			dirPath := filepath.Join(hook.LogConfig.LogPath, dir)
+			hook.deleteOldLogFileOnce(dirPath)
 			//if dir is empty
-			if isEmptyDir(dir) {
-				err := os.Remove(dir)
+			if isEmptyDir(dirPath) {
+				err := os.Remove(dirPath)
 				if err != nil {
 					logrus.Errorf("deleteOldLogDir os.Remove err:%v", err)
 				}
