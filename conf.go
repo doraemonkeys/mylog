@@ -31,6 +31,8 @@ type LogConfig struct {
 	NoConsole bool
 	//取消时间戳Timestamp
 	NoTimestamp bool
+	// 时间戳格式，默认 2006-01-02 15:04:05.000
+	TimestampFormat string
 	//在控制台输出shortfile
 	ShowShortFileInConsole bool
 	//在控制台输出func
@@ -103,9 +105,9 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 
 	logger.SetLevel(level) //设置最低的Level
 	formatter := &TextFormatter{
-		TimestampFormat: "2006-01-02 15:04:05", //时间格式
-		FullTimestamp:   true,                  //开启时间戳
-		ForceColors:     true,                  //开启颜色
+		TimestampFormat: "2006-01-02 15:04:05.000", //时间戳格式
+		FullTimestamp:   true,                      //开启时间戳
+		ForceColors:     true,                      //开启颜色
 		NoConsole:       config.NoConsole,
 		// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 		// 	//返回shortfile,funcname,linenum
@@ -119,6 +121,9 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 			return "", ""
 		},
+	}
+	if config.TimestampFormat != "" {
+		formatter.TimestampFormat = config.TimestampFormat
 	}
 
 	if config.NoTimestamp {
