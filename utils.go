@@ -3,7 +3,9 @@ package mylog
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -124,4 +126,36 @@ func isEmptyDir(dir string) bool {
 		return false
 	}
 	return len(DirEntry) == 0
+}
+func getFolderSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		size += info.Size()
+		return nil
+	})
+	return size, err
+}
+
+// time1 > time2 return 1.
+// time1 < time2 return -1.
+// return 0 if error or equal.
+func timeStringCompare(time1, time2, format string) int {
+	t1, err := time.ParseInLocation(format, time1, time.Local)
+	if err != nil {
+		return 0
+	}
+	t2, err := time.ParseInLocation(format, time2, time.Local)
+	if err != nil {
+		return 0
+	}
+	if t1.After(t2) {
+		return 1
+	}
+	if t1.Before(t2) {
+		return -1
+	}
+	return 0
 }

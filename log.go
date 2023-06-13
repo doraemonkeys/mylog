@@ -1,6 +1,7 @@
 package mylog
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -189,10 +190,10 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	var errorFileName string
 	var commonFileName string
 	if hook.LogConfig.LogFileNameSuffix == "" {
-		errorFileName = tempFileName + "_" + "ERROR" + hook.LogConfig.LogExt
+		errorFileName = tempFileName + "_" + "error" + hook.LogConfig.LogExt
 		commonFileName = tempFileName + hook.LogConfig.LogExt
 	} else {
-		errorFileName = tempFileName + "_" + "ERROR" + "_" + hook.LogConfig.LogFileNameSuffix + hook.LogConfig.LogExt
+		errorFileName = tempFileName + "_" + "error" + "_" + hook.LogConfig.LogFileNameSuffix + hook.LogConfig.LogExt
 		commonFileName = tempFileName + "_" + hook.LogConfig.LogFileNameSuffix + hook.LogConfig.LogExt
 	}
 	errorFileName = makeFileNameLegal(errorFileName)
@@ -201,22 +202,35 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	newPath := filepath.Join(hook.LogConfig.LogPath, hook.FileDate)
 	errorFileName = filepath.Join(newPath, errorFileName)
 	commonFileName = filepath.Join(newPath, commonFileName)
-	err := os.MkdirAll(newPath, 0777)
+
+	var (
+		file  *os.File
+		file2 *os.File
+		ok    bool
+		err   error
+	)
+	file, file2, ok, err = hook.tryOpenTwoOldLogFile(newPath, errorFileName, commonFileName)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		err := os.MkdirAll(newPath, 0777)
+		if err != nil {
+			return err
+		}
+		file, err = os.OpenFile(errorFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
+		file2, err = os.OpenFile(commonFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
 	}
 
-	file, err := os.OpenFile(errorFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return err
-	}
 	hook.ErrWriter = file
 	hook.LogSize, _ = file.Seek(0, io.SeekEnd)
 
-	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return err
-	}
 	hook.OtherWriter = file2
 	tempSize, _ := file2.Seek(0, io.SeekEnd)
 	hook.LogSize += tempSize
@@ -233,15 +247,100 @@ func (hook *logHook) openLogFile(tempFileName string) error {
 	newFileName = makeFileNameLegal(newFileName)
 	newFileName = filepath.Join(hook.LogConfig.LogPath, newFileName)
 
-	file, err := os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := hook.tryOpenOldLogFile(newFileName)
 	if err != nil {
 		return err
 	}
+
 	hook.OtherWriter = file
 
 	//更新日志大小(文件为空时，返回0)
 	hook.LogSize, _ = file.Seek(0, io.SeekEnd)
 	return nil
+}
+
+func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
+	if hook.LogConfig.DateSplit && hook.LogConfig.MaxLogSize > 0 {
+		return nil, errors.New("按日期分割和按大小分割不能同时开启")
+	}
+	if hook.LogConfig.DateSplit {
+		return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	}
+	// default
+	if !hook.LogConfig.DateSplit && hook.LogConfig.MaxLogSize == 0 {
+		return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	}
+
+	//按大小分割
+	oldLogFiles, err := getFileNmaesInPath(hook.LogConfig.LogPath)
+	if err != nil {
+		return nil, err
+	}
+	var latestLogFile string = hook.dateFmt2
+
+	for _, file := range oldLogFiles {
+		if len(file) != len(filepath.Base(newFileName)) {
+			continue
+		}
+		fileNameTime := file[0:len(hook.dateFmt2)]
+		latestLogFileTime := latestLogFile[0:len(hook.dateFmt2)]
+		if timeStringCompare(fileNameTime, latestLogFileTime, hook.dateFmt2) == 1 {
+			latestLogFile = file
+		}
+	}
+	if latestLogFile == hook.dateFmt2 {
+		return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	}
+	// 检查文件大小
+	fileStat, err := os.Stat(filepath.Join(hook.LogConfig.LogPath, latestLogFile))
+	if err != nil {
+		return nil, err
+	}
+	if fileStat.Size() < hook.LogConfig.MaxLogSize {
+		return os.OpenFile(filepath.Join(hook.LogConfig.LogPath, latestLogFile), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	}
+	// 文件大小超过限制，新建文件
+	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+}
+
+func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*os.File, *os.File, bool, error) {
+	if hook.LogConfig.MaxLogSize == 0 {
+		return nil, nil, false, nil
+	}
+	dirs, err := getFolderNamesInPath(hook.LogConfig.LogPath)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	var latestFolder string = hook.dateFmt
+	for _, dir := range dirs {
+		if len(dir) != len(hook.dateFmt) {
+			continue
+		}
+		if timeStringCompare(dir, latestFolder, hook.dateFmt) == 1 {
+			latestFolder = dir
+		}
+	}
+	if latestFolder == hook.dateFmt {
+		return nil, nil, false, nil
+	}
+	// 检查文件夹大小
+	folderSize, err := getFolderSize(filepath.Join(hook.LogConfig.LogPath, latestFolder))
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if folderSize < hook.LogConfig.MaxLogSize {
+		errorFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(errorFileName))
+		commonFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(commonFileName))
+	}
+	file, err := os.OpenFile(errorFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	return file, file2, true, nil
 }
 
 var oldLogCheckerOnline = false

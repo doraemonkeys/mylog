@@ -145,9 +145,9 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		config.TimeLocation = time.Local
 	}
 	if config.DefaultLogName == "" {
-		config.DefaultLogName = "DEFAULT"
+		config.DefaultLogName = "default"
 	}
-	config.keepSuffix = "KEEP"
+	config.keepSuffix = "keep"
 
 	hook := &logHook{}
 	hook.dateFmt = "2006_01_02"
