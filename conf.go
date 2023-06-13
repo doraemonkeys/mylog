@@ -1,6 +1,7 @@
 package mylog
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -39,6 +40,8 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	// 关闭调用者信息
 	DisableCaller bool
+	// 禁用写缓冲
+	DisableWriterBuffer bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数(设置后请不要在日志文件夹中放置其他文件，否则可能被删除)
@@ -64,11 +67,15 @@ func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 }
 
 type logHook struct {
-	ErrWriter   *os.File
-	OtherWriter *os.File
+	ErrWriter      *LazyFileWriter
+	OtherWriter    *os.File
+	OtherBufWriter *bufio.Writer
+	// 默认4096
+	WriterBufferSize int
 	//修改Writer时加锁
-	WriterLock *sync.RWMutex
-	LogConfig  LogConfig
+	WriterLock    *sync.RWMutex
+	LastWriteTime time.Time
+	LogConfig     LogConfig
 	// 2006_01_02
 	FileDate string
 	// byte,仅在SizeSplit>0时有效
@@ -156,6 +163,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	hook.LogSize = 0
 	hook.WriterLock = &sync.RWMutex{}
 	hook.LogConfig = config
+	hook.WriterBufferSize = 4096
 
 	//添加hook
 	logger.AddHook(hook)
@@ -168,5 +176,22 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		oldLogCheckerOnline = true
 		go hook.deleteOldLog()
 	}
+	if !config.DisableWriterBuffer && !config.LogFileDisable {
+		// 隔一段时间刷新缓冲区
+		go hook.flushBufferTimer(time.Second * 5)
+	}
 	return nil
+}
+
+func (hook *logHook) flushBufferTimer(d time.Duration) {
+	ticker := time.NewTicker(d)
+	for range ticker.C {
+		if hook.OtherBufWriter.Buffered() > 0 && time.Since(hook.LastWriteTime) > d {
+			hook.WriterLock.Lock()
+			if hook.OtherBufWriter != nil {
+				hook.OtherBufWriter.Flush()
+			}
+			hook.WriterLock.Unlock()
+		}
+	}
 }

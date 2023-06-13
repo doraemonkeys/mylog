@@ -2,6 +2,7 @@ package mylog
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,4 +159,55 @@ func timeStringCompare(time1, time2, format string) int {
 		return -1
 	}
 	return 0
+}
+
+// 仅在有写入时才创建文件
+type LazyFileWriter struct {
+	filePath string
+	file     *os.File
+}
+
+func (w *LazyFileWriter) Write(p []byte) (n int, err error) {
+	if w.file == nil {
+		w.file, err = os.OpenFile(w.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return w.file.Write(p)
+}
+
+func (w *LazyFileWriter) Close() error {
+	if w.file != nil {
+		return w.file.Close()
+	}
+	return nil
+}
+
+func (w *LazyFileWriter) Seek(offset int64, whence int) (int64, error) {
+	if w.file == nil {
+		return 0, errors.New("file not created")
+	}
+	return w.file.Seek(offset, whence)
+}
+
+// Name returns the name of the file as presented to Open.
+func (w *LazyFileWriter) Name() string {
+	if w.file != nil {
+		return w.file.Name()
+	}
+	return filepath.Base(w.filePath)
+}
+
+// 是否已经创建了文件
+func (w *LazyFileWriter) IsCreated() bool {
+	return w.file != nil
+}
+
+func NewLazyFileWriter(filePath string) *LazyFileWriter {
+	return &LazyFileWriter{filePath: filePath}
+}
+
+func NewLazyFileWriterWithFile(filePath string, file *os.File) *LazyFileWriter {
+	return &LazyFileWriter{filePath: filePath, file: file}
 }

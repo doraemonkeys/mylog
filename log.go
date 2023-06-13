@@ -1,6 +1,7 @@
 package mylog
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -56,12 +57,12 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 
 	hook.checkSplit()
 
+	writed := false
 	hook.WriterLock.RLock()
-	defer hook.WriterLock.RUnlock()
 	if hook.ErrWriter != nil && entry.Level <= logrus.ErrorLevel {
 		hook.LogSize += int64(len(line))
 		hook.ErrWriter.Write(line)
-
+		writed = true
 		if !hook.LogConfig.ErrInNormal {
 			return nil
 		}
@@ -69,7 +70,17 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 
 	if hook.OtherWriter != nil {
 		hook.LogSize += int64(len(line))
-		hook.OtherWriter.Write(line)
+		if hook.LogConfig.DisableWriterBuffer {
+			hook.OtherWriter.Write(line)
+		} else {
+			hook.OtherBufWriter.Write(line)
+		}
+		writed = true
+	}
+	hook.WriterLock.RUnlock()
+
+	if writed {
+		hook.LastWriteTime = time.Now()
 	}
 
 	return nil
@@ -204,12 +215,12 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	commonFileName = filepath.Join(newPath, commonFileName)
 
 	var (
-		file  *os.File
-		file2 *os.File
-		ok    bool
-		err   error
+		lazyFile *LazyFileWriter
+		file2    *os.File
+		ok       bool
+		err      error
 	)
-	file, file2, ok, err = hook.tryOpenTwoOldLogFile(newPath, errorFileName, commonFileName)
+	lazyFile, file2, ok, err = hook.tryOpenTwoOldLogFile(newPath, errorFileName, commonFileName)
 	if err != nil {
 		return err
 	}
@@ -218,20 +229,22 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 		if err != nil {
 			return err
 		}
-		file, err = os.OpenFile(errorFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			return err
-		}
+		lazyFile = NewLazyFileWriter(errorFileName)
 		file2, err = os.OpenFile(commonFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			return err
 		}
 	}
 
-	hook.ErrWriter = file
-	hook.LogSize, _ = file.Seek(0, io.SeekEnd)
+	hook.ErrWriter = lazyFile
+	if lazyFile.IsCreated() {
+		hook.LogSize, _ = lazyFile.Seek(0, io.SeekEnd)
+	} else {
+		hook.LogSize = 0
+	}
 
 	hook.OtherWriter = file2
+	hook.OtherBufWriter = bufio.NewWriterSize(file2, hook.WriterBufferSize)
 	tempSize, _ := file2.Seek(0, io.SeekEnd)
 	hook.LogSize += tempSize
 	return nil
@@ -253,6 +266,7 @@ func (hook *logHook) openLogFile(tempFileName string) error {
 	}
 
 	hook.OtherWriter = file
+	hook.OtherBufWriter = bufio.NewWriterSize(file, hook.WriterBufferSize)
 
 	//更新日志大小(文件为空时，返回0)
 	hook.LogSize, _ = file.Seek(0, io.SeekEnd)
@@ -303,7 +317,7 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 }
 
-func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*os.File, *os.File, bool, error) {
+func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*LazyFileWriter, *os.File, bool, error) {
 	if hook.LogConfig.MaxLogSize == 0 {
 		return nil, nil, false, nil
 	}
@@ -328,14 +342,12 @@ func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonF
 	if err != nil {
 		return nil, nil, false, err
 	}
+	// 直接在文件夹中创建新文件
 	if folderSize < hook.LogConfig.MaxLogSize {
 		errorFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(errorFileName))
 		commonFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(commonFileName))
 	}
-	file, err := os.OpenFile(errorFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, nil, false, err
-	}
+	file := NewLazyFileWriter(errorFileName)
 	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, nil, false, err
