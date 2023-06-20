@@ -93,6 +93,9 @@ func makeFileNameLegal(s string) string {
 
 // 获取path路径下的文件夹名称
 func getFolderNamesInPath(path string) ([]string, error) {
+	if path == "" {
+		path = "."
+	}
 	DirEntry, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -108,6 +111,9 @@ func getFolderNamesInPath(path string) ([]string, error) {
 
 // 获取path下所有文件名称(含后缀)
 func getFileNmaesInPath(path string) ([]string, error) {
+	if path == "" {
+		path = "."
+	}
 	DirEntry, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
