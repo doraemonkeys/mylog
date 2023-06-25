@@ -44,7 +44,8 @@ type LogConfig struct {
 	DisableWriterBuffer bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
-	// 日志最大保留天数(设置后请不要在日志文件夹中放置其他文件，否则可能被删除)
+	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
+	// 开启此功能后，如果没有设置日志文件夹路径，则默认为当前程序运行路径下的logs文件夹。
 	MaxKeepDays int
 	//日志扩展名(默认.log)
 	LogExt string
@@ -153,6 +154,9 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	}
 	if config.DefaultLogName == "" {
 		config.DefaultLogName = "default"
+	}
+	if config.MaxKeepDays > 0 && config.LogPath == "" {
+		config.LogPath = "./logs"
 	}
 	config.keepSuffix = "keep"
 

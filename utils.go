@@ -11,31 +11,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// D:\xxx\yyy\yourproject\pkg\log\log.go -> pkg\log\log.go:123
+// D:\xxx\yyy\yourproject\pkg\log\log.go -> log.go:123
 func getShortFileName(file string, lineInfo string) string {
 	file = strings.Replace(file, "\\", "/", -1)
-
-	// if 做一次快速简单的判断
-	if strings.Contains(file, "/") {
-		env, _ := os.Getwd()
-		env = strings.Replace(env, "\\", "/", -1)
-		if len(file) <= len(env) || !isChildDir(env, file) {
-			return file + ":" + lineInfo
+	for i := len(file) - 1; i >= 0; i-- {
+		if file[i] == '/' {
+			file = file[i+1:]
+			break
 		}
-		file = file[len(env):]
-		if file[0] == '/' {
-			file = file[1:]
-		}
-		file = file + ":" + lineInfo
 	}
-	return file
-}
-
-// 判断child是否是parent的子文件夹(为了性能只是简单的判断前缀，需要保证路径分隔符一致)
-func isChildDir(parent, child string) bool {
-	parent = strings.ToUpper(parent)
-	child = strings.ToUpper(child)
-	return strings.HasPrefix(child, parent)
+	return file + ":" + lineInfo
 }
 
 // 去除颜色

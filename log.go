@@ -366,7 +366,7 @@ func (hook *logHook) deleteOldLog() {
 
 // 删除过期日志
 func (hook *logHook) deleteOldLogOnce() {
-	if hook.LogConfig.MaxKeepDays == 0 {
+	if hook.LogConfig.MaxKeepDays <= 0 {
 		return
 	}
 	hook.deleteOldLogDirOnce(hook.LogConfig.LogPath)
@@ -374,7 +374,7 @@ func (hook *logHook) deleteOldLogOnce() {
 }
 
 func (hook *logHook) deleteOldLogDirOnce(dir string) {
-	if hook.LogConfig.MaxKeepDays == 0 {
+	if hook.LogConfig.MaxKeepDays <= 0 {
 		return
 	}
 	dirs, err := getFolderNamesInPath(hook.LogConfig.LogPath)
