@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doraemonkeys/mylog"
+	"github.com/doraemonkeys/mylog"
 	"github.com/sirupsen/logrus"
 )
 
