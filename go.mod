@@ -1,4 +1,4 @@
-module github.com/Doraemonkeys/mylog
+module github.com/doraemonkeys/mylog
 
 go 1.20
 
