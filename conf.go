@@ -12,6 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// 默认日志文件夹路径。
+//
+// 开启日志最大保留天数后，如果没有设置日志文件夹路径，则默认为此路径。
+const DefaultSavePath = "./logs"
+
 // 日志配置,可以为空
 type LogConfig struct {
 	//日志路径(可以为空)
@@ -45,7 +50,7 @@ type LogConfig struct {
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
-	// 开启此功能后，如果没有设置日志文件夹路径，则默认为当前程序运行路径下的logs文件夹。
+	// 开启此功能后，如果没有设置日志文件夹路径，则默认为DefaultSavePath。
 	MaxKeepDays int
 	//日志扩展名(默认.log)
 	LogExt string
@@ -156,7 +161,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		config.DefaultLogName = "default"
 	}
 	if config.MaxKeepDays > 0 && config.LogPath == "" {
-		config.LogPath = "./logs"
+		config.LogPath = DefaultSavePath
 	}
 	config.keepSuffix = "keep"
 
