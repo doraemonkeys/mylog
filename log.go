@@ -215,7 +215,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	commonFileName = filepath.Join(newPath, commonFileName)
 
 	var (
-		lazyFile *LazyFileWriter
+		lazyFile *lazyFileWriter
 		file2    *os.File
 		ok       bool
 		err      error
@@ -229,7 +229,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 		if err != nil {
 			return err
 		}
-		lazyFile = NewLazyFileWriter(errorFileName)
+		lazyFile = newLazyFileWriter(errorFileName)
 		file2, err = os.OpenFile(commonFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			return err
@@ -317,7 +317,7 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 }
 
-func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*LazyFileWriter, *os.File, bool, error) {
+func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*lazyFileWriter, *os.File, bool, error) {
 	if hook.LogConfig.MaxLogSize == 0 {
 		return nil, nil, false, nil
 	}
@@ -347,7 +347,7 @@ func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonF
 		errorFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(errorFileName))
 		commonFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(commonFileName))
 	}
-	file := NewLazyFileWriter(errorFileName)
+	file := newLazyFileWriter(errorFileName)
 	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, nil, false, err

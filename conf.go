@@ -85,7 +85,7 @@ func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 }
 
 type logHook struct {
-	ErrWriter      *LazyFileWriter
+	ErrWriter      *lazyFileWriter
 	OtherWriter    *os.File
 	OtherBufWriter *bufio.Writer
 	// 默认4096

@@ -153,12 +153,12 @@ func timeStringCompare(time1, time2, format string) int {
 }
 
 // 仅在有写入时才创建文件
-type LazyFileWriter struct {
+type lazyFileWriter struct {
 	filePath string
 	file     *os.File
 }
 
-func (w *LazyFileWriter) Write(p []byte) (n int, err error) {
+func (w *lazyFileWriter) Write(p []byte) (n int, err error) {
 	if w.file == nil {
 		w.file, err = os.OpenFile(w.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -168,14 +168,14 @@ func (w *LazyFileWriter) Write(p []byte) (n int, err error) {
 	return w.file.Write(p)
 }
 
-func (w *LazyFileWriter) Close() error {
+func (w *lazyFileWriter) Close() error {
 	if w.file != nil {
 		return w.file.Close()
 	}
 	return nil
 }
 
-func (w *LazyFileWriter) Seek(offset int64, whence int) (int64, error) {
+func (w *lazyFileWriter) Seek(offset int64, whence int) (int64, error) {
 	if w.file == nil {
 		return 0, errors.New("file not created")
 	}
@@ -183,7 +183,7 @@ func (w *LazyFileWriter) Seek(offset int64, whence int) (int64, error) {
 }
 
 // Name returns the name of the file as presented to Open.
-func (w *LazyFileWriter) Name() string {
+func (w *lazyFileWriter) Name() string {
 	if w.file != nil {
 		return w.file.Name()
 	}
@@ -191,14 +191,14 @@ func (w *LazyFileWriter) Name() string {
 }
 
 // 是否已经创建了文件
-func (w *LazyFileWriter) IsCreated() bool {
+func (w *lazyFileWriter) IsCreated() bool {
 	return w.file != nil
 }
 
-func NewLazyFileWriter(filePath string) *LazyFileWriter {
-	return &LazyFileWriter{filePath: filePath}
+func newLazyFileWriter(filePath string) *lazyFileWriter {
+	return &lazyFileWriter{filePath: filePath}
 }
 
-func NewLazyFileWriterWithFile(filePath string, file *os.File) *LazyFileWriter {
-	return &LazyFileWriter{filePath: filePath, file: file}
-}
+// func newLazyFileWriterWithFile(filePath string, file *os.File) *LazyFileWriter {
+// 	return &LazyFileWriter{filePath: filePath, file: file}
+// }
