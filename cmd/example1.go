@@ -13,7 +13,7 @@ import (
 func init() {
 	config := mylog.LogConfig{
 		LogPath:  `./test_log`,
-		LogLevel: "debug",
+		LogLevel: "trace",
 		//LogFileNameSuffix: "test",
 		//LogExt:            "log",
 		//MaxLogSize: 1024 * 1024 * 10, //10M

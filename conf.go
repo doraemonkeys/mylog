@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	myformatter "github.com/doraemonkeys/mylog/formatter"
 	"github.com/sirupsen/logrus"
 )
 
@@ -117,7 +118,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	}
 
 	logger.SetLevel(level) //设置最低的Level
-	formatter := &TextFormatter{
+	formatter := &myformatter.TextFormatter{
 		TimestampFormat: "2006-01-02 15:04:05.000", //时间戳格式
 		FullTimestamp:   true,                      //开启时间戳
 		ForceColors:     true,                      //开启颜色
@@ -198,6 +199,9 @@ func (hook *logHook) flushBufferTimer(d time.Duration) {
 		if hook.OtherBufWriter.Buffered() > 0 && time.Since(hook.LastWriteTime) > d {
 			hook.WriterLock.Lock()
 			if hook.OtherBufWriter != nil {
+				// 此处不用更新LastWriteTime，因为ticker是固定时间间隔触发的，
+				// 如果在等待ticker触发时，buffer满了导致写入日志文件，那么LastWriteTime会被更新。
+				// 否则由此处定时触发写入日志文件。
 				hook.OtherBufWriter.Flush()
 			}
 			hook.WriterLock.Unlock()

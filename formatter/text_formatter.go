@@ -2,7 +2,6 @@ package mylog
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -17,21 +16,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type fieldKey string
-
-// FieldMap allows customization of the key names for default fields.
-type FieldMap map[fieldKey]string
-
-func (f FieldMap) resolve(key fieldKey) string {
-	if k, ok := f[key]; ok {
-		return k
-	}
-
-	return string(key)
-}
-
 const (
 	red    = 31
+	green  = 32
 	yellow = 33
 	purple = 35
 	blue   = 36
@@ -117,60 +104,10 @@ type TextFormatter struct {
 
 	// The max length of the level text, generated dynamically on init
 	levelTextMaxLength int
-	NoConsole          bool
+
+	// 标记logrus不输出到控制台
+	NoConsole bool
 }
-
-// An entry is the final or intermediate Logrus logging entry. It contains all
-// the fields passed with WithField{,s}. It's finally logged when Trace, Debug,
-// Info, Warn, Error, Fatal or Panic is called on it. These objects can be
-// reused and passed around as much as you wish to avoid field duplication.
-type Entry struct {
-	Logger *logrus.Logger
-
-	// Contains all the fields set by the user.
-	Data logrus.Fields
-
-	// Time at which the log entry was created
-	Time time.Time
-
-	// Level the log entry was logged at: Trace, Debug, Info, Warn, Error, Fatal or Panic
-	// This field will be set on entry firing and the value will be equal to the one in Logger struct field.
-	Level logrus.Level
-
-	// Calling method, with package name
-	Caller *runtime.Frame
-
-	// Message passed to Trace, Debug, Info, Warn, Error, Fatal or Panic
-	Message string
-
-	// When formatter is called in entry.log(), a Buffer may be set to entry
-	Buffer *bytes.Buffer
-
-	// Contains the context set by the user. Useful for hook processing etc.
-	Context context.Context
-
-	// err may contain a field formatting error
-	err string
-}
-
-const defaultTimestampFormat = time.RFC3339
-
-// func checkIfTerminal(w io.Writer) bool {
-// 	switch v := w.(type) {
-// 	case *os.File:
-// 		handle := windows.Handle(v.Fd())
-// 		var mode uint32
-// 		if err := windows.GetConsoleMode(handle, &mode); err != nil {
-// 			return false
-// 		}
-// 		mode |= windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING
-// 		if err := windows.SetConsoleMode(handle, mode); err != nil {
-// 			return false
-// 		}
-// 		return true
-// 	}
-// 	return false
-// }
 
 func (f *TextFormatter) init(entry *Entry) {
 	if entry.Logger != nil {
@@ -199,62 +136,6 @@ func (f *TextFormatter) isColored() bool {
 	}
 
 	return isColored && !f.DisableColors
-}
-
-// This is to not silently overwrite `time`, `msg`, `func` and `level` fields when
-// dumping it. If this code wasn't there doing:
-//
-//	logrus.WithField("level", 1).Info("hello")
-//
-// Would just silently drop the user provided level. Instead with this code
-// it'll logged as:
-//
-//	{"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
-//
-// It's not exported because it's still using Data in an opinionated way. It's to
-// avoid code duplication between the two default formatters.
-func prefixFieldClashes(data logrus.Fields, fieldMap FieldMap, reportCaller bool) {
-	timeKey := fieldMap.resolve(logrus.FieldKeyTime)
-	if t, ok := data[timeKey]; ok {
-		data["fields."+timeKey] = t
-		delete(data, timeKey)
-	}
-
-	msgKey := fieldMap.resolve(logrus.FieldKeyMsg)
-	if m, ok := data[msgKey]; ok {
-		data["fields."+msgKey] = m
-		delete(data, msgKey)
-	}
-
-	levelKey := fieldMap.resolve(logrus.FieldKeyLevel)
-	if l, ok := data[levelKey]; ok {
-		data["fields."+levelKey] = l
-		delete(data, levelKey)
-	}
-
-	logrusErrKey := fieldMap.resolve(logrus.FieldKeyLogrusError)
-	if l, ok := data[logrusErrKey]; ok {
-		data["fields."+logrusErrKey] = l
-		delete(data, logrusErrKey)
-	}
-
-	// If reportCaller is not set, 'func' will not conflict.
-	if reportCaller {
-		funcKey := fieldMap.resolve(logrus.FieldKeyFunc)
-		if l, ok := data[funcKey]; ok {
-			data["fields."+funcKey] = l
-		}
-		fileKey := fieldMap.resolve(logrus.FieldKeyFile)
-		if l, ok := data[fileKey]; ok {
-			data["fields."+fileKey] = l
-		}
-	}
-}
-
-func (entry Entry) HasCaller() (has bool) {
-	return entry.Logger != nil &&
-		entry.Logger.ReportCaller &&
-		entry.Caller != nil
 }
 
 // Format renders a single log entry
@@ -362,8 +243,10 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 func (f *TextFormatter) printColored(b *bytes.Buffer, entry *Entry, keys []string, data logrus.Fields, timestampFormat string) {
 	var levelColor int
 	switch entry.Level {
-	case logrus.DebugLevel, logrus.TraceLevel:
+	case logrus.TraceLevel:
 		levelColor = purple
+	case logrus.DebugLevel:
+		levelColor = green
 	case logrus.WarnLevel:
 		levelColor = yellow
 	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
