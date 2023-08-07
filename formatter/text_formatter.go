@@ -1,4 +1,4 @@
-package mylog
+package formatter
 
 import (
 	"bytes"
@@ -104,15 +104,12 @@ type TextFormatter struct {
 
 	// The max length of the level text, generated dynamically on init
 	levelTextMaxLength int
-
-	// 标记logrus不输出到控制台
-	NoConsole bool
 }
 
 func (f *TextFormatter) init(entry *Entry) {
 	if entry.Logger != nil {
-		//f.isTerminal = checkIfTerminal(entry.Logger.Out)
-		f.isTerminal = !f.NoConsole
+		f.isTerminal = checkIfTerminal(entry.Logger.Out)
+		// f.isTerminal = !f.NoConsole // 历史遗迹，非logrus原库代码
 	}
 	// Get the max length of the level text
 	for _, level := range logrus.AllLevels {

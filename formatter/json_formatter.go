@@ -1,4 +1,4 @@
-package mylog
+package formatter
 
 type fieldKey string
 
