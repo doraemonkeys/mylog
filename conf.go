@@ -18,6 +18,17 @@ import (
 // 开启日志最大保留天数后，如果没有设置日志文件夹路径，则默认为此路径。
 const DefaultSavePath = "./logs"
 
+// 日志级别
+const (
+	PanicLevel = "panic"
+	FatalLevel = "fatal"
+	ErrorLevel = "error"
+	WarnLevel  = "warn"
+	InfoLevel  = "info"
+	DebugLevel = "debug"
+	TraceLevel = "trace"
+)
+
 // 日志配置,可以为空
 type LogConfig struct {
 	//日志路径(可以为空)
