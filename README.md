@@ -76,11 +76,12 @@ import (
 
 func init() {
 	config := mylog.LogConfig{
-		LogPath:     `./test_log`,
-		LogLevel:    "trace",
-		ErrSeparate: true, //错误日志是否单独输出到文件
-		DateSplit:   true, //是否按日期分割日志
-		MaxKeepDays: 1,
+		LogPath:             `./test_log`,
+		LogLevel:            "trace",
+		ErrSeparate:         true, //错误日志是否单独输出到文件
+		DateSplit:           true, //是否按日期分割日志
+		DisableWriterBuffer: true, //是否禁用写缓存
+		MaxKeepDays:         1,
 	}
 	config.SetKeyValue("server", "[DEBUG]")
 	err := mylog.InitGlobalLogger(config)
