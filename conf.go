@@ -85,12 +85,16 @@ func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 }
 
 type logHook struct {
-	ErrWriter      *lazyFileWriter
-	OtherWriter    *os.File
+	// 暂且认为写入文件的操作是线程安全的
+	ErrWriter *lazyFileWriter
+	// 暂且认为写入文件的操作是线程安全的
+	OtherWriter *os.File
+	// bufio 并发不安全
 	OtherBufWriter *bufio.Writer
 	// 默认4096
 	WriterBufferSize int
-	//修改Writer时加锁
+	// 写入ErrWriter和OtherWriter是加读锁防止被修改为nil或close(因为暂且认为写入文件的操作是线程安全的)。
+	// 写入OtherBufWriter加写锁，因为bufio并发不安全。
 	WriterLock    *sync.RWMutex
 	LastWriteTime time.Time
 	LogConfig     LogConfig
@@ -212,9 +216,47 @@ func (hook *logHook) flushBufferTimer(d time.Duration) {
 				// 此处不用更新LastWriteTime，因为ticker是固定时间间隔触发的，
 				// 如果在等待ticker触发时，buffer满了导致写入日志文件，那么LastWriteTime会被更新。
 				// 否则由此处定时触发写入日志文件。
-				hook.OtherBufWriter.Flush()
+				err := hook.OtherBufWriter.Flush()
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "flushBufferTimer err:", err)
+				}
 			}
 			hook.WriterLock.Unlock()
 		}
 	}
+}
+
+func FlushBuf(logger *logrus.Logger) error {
+	if logger == nil {
+		return nil
+	}
+	var hooksMap logrus.LevelHooks = logger.Hooks
+	if hooksMap == nil {
+		return nil
+	}
+	for _, hooks := range hooksMap {
+		if hooks == nil {
+			continue
+		}
+		for _, hook := range hooks {
+			if hook == nil {
+				continue
+			}
+			if logHook, ok := hook.(*logHook); ok {
+				if logHook == nil {
+					continue
+				}
+				logHook.WriterLock.Lock()
+				if logHook.OtherBufWriter != nil && logHook.OtherBufWriter.Buffered() > 0 {
+					err := logHook.OtherBufWriter.Flush()
+					if err != nil {
+						logHook.WriterLock.Unlock()
+						return err
+					}
+				}
+				logHook.WriterLock.Unlock()
+			}
+		}
+	}
+	return nil
 }

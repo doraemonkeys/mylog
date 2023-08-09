@@ -58,10 +58,23 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	hook.checkSplit()
 
 	writed := false
-	hook.WriterLock.RLock()
+
+	// ------------------- 加锁写入文件/缓冲 -------------------
+	if hook.LogConfig.DisableWriterBuffer {
+		hook.WriterLock.RLock()
+		defer hook.WriterLock.RUnlock()
+	} else {
+		hook.WriterLock.Lock()
+		defer hook.WriterLock.Unlock()
+	}
+
 	if hook.ErrWriter != nil && entry.Level <= logrus.ErrorLevel {
 		hook.LogSize += int64(len(line))
-		hook.ErrWriter.Write(line)
+		_, err := hook.ErrWriter.Write(line)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to write error to the file, %v", err)
+			return err
+		}
 		writed = true
 		if !hook.LogConfig.ErrInNormal {
 			return nil
@@ -71,13 +84,20 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	if hook.OtherWriter != nil {
 		hook.LogSize += int64(len(line))
 		if hook.LogConfig.DisableWriterBuffer {
-			hook.OtherWriter.Write(line)
+			_, err := hook.OtherWriter.Write(line)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to write log to the file, %v", err)
+				return err
+			}
 		} else {
-			hook.OtherBufWriter.Write(line)
+			_, err := hook.OtherBufWriter.Write(line)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to write log to the buffer, %v", err)
+				return err
+			}
 		}
 		writed = true
 	}
-	hook.WriterLock.RUnlock()
 
 	if writed {
 		hook.LastWriteTime = time.Now()
