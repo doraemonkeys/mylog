@@ -66,6 +66,10 @@ func main() {
 		logrus.Info("info")
 		logrus.Warn("warn")
 		logrus.Error("error")
+		// err := mylog.FlushBuf(logrus.StandardLogger())
+		// if err != nil {
+		// 	panic(err)
+		// }
 		fmt.Println("sleep 1s")
 		time.Sleep(time.Second)
 	}
