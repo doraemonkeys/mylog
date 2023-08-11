@@ -26,8 +26,10 @@ func init() {
 		//ShowFuncInConsole: true, //控制台是否显示函数名
 		//NoFile: true, //不输出到文件
 		//NoConsole: true, //不输出到控制台
-		//NoTimestamp: true, //不显示时间戳
+		// NoTimestamp: true, //不显示时间戳
 		//DisableCaller: true, //关闭调用者信息
+		// DisableColors: true, //关闭颜色
+		// JSONFormat:  true, //json格式
 		MaxKeepDays: 1,
 	}
 	config.SetKeyValue("server", "[DEBUG]")
@@ -46,6 +48,10 @@ func main() {
 	logrus.Info("info")
 	logrus.Warn("warn")
 	logrus.Error("error")
+
+	logrus.WithFields(logrus.Fields{
+		"animal": "walrus",
+	}).Info("A walrus appears")
 
 	var err error = errors.New("test error")
 	//ERRO[2023-03-02 01:21:35] my msg  error="test error" server="[DEBUG]"

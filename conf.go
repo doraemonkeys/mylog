@@ -59,6 +59,10 @@ type LogConfig struct {
 	DisableCaller bool
 	// 禁用写缓冲
 	DisableWriterBuffer bool
+	// 以json格式输出
+	JSONFormat bool
+	// 禁用颜色
+	DisableColors bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
@@ -133,30 +137,45 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	}
 
 	logger.SetLevel(level) //设置最低的Level
-	formatter := &myformatter.TextFormatter{
-		TimestampFormat: "2006-01-02 15:04:05.000", //时间戳格式
-		FullTimestamp:   true,                      //开启时间戳
-		ForceColors:     true,                      //开启颜色
-		// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-		// 	//返回shortfile,funcname,linenum
-		// 	//main.go:main:12
-		// 	shortFile := f.File
-		// 	if strings.Contains(f.File, "/") {
-		// 		shortFile = f.File[strings.LastIndex(f.File, "/")+1:]
-		// 	}
-		// 	return "", fmt.Sprintf("%s:%s():%d:", shortFile, f.Function, f.Line)
-		// },
-		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-			return "", ""
-		},
-	}
-	if config.TimestampFormat != "" {
-		formatter.TimestampFormat = config.TimestampFormat
+
+	if config.TimestampFormat == "" {
+		config.TimestampFormat = "2006-01-02 15:04:05.000"
 	}
 
-	if config.NoTimestamp {
-		formatter.DisableTimestamp = true
+	// if config.NoTimestamp {
+	// 	formatter.DisableTimestamp = true
+	// }
+
+	var formatter logrus.Formatter
+	if config.JSONFormat {
+		formatter = &logrus.JSONFormatter{
+			TimestampFormat:  config.TimestampFormat, //时间戳格式
+			DisableTimestamp: config.NoTimestamp,     //开启时间戳
+			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+				return "", ""
+			},
+		}
+	} else {
+		formatter = &myformatter.TextFormatter{
+			TimestampFormat:  config.TimestampFormat, //时间戳格式
+			FullTimestamp:    true,
+			DisableTimestamp: config.NoTimestamp,    //开启时间戳
+			ForceColors:      !config.DisableColors, //开启颜色
+			// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			// 	//返回shortfile,funcname,linenum
+			// 	//main.go:main:12
+			// 	shortFile := f.File
+			// 	if strings.Contains(f.File, "/") {
+			// 		shortFile = f.File[strings.LastIndex(f.File, "/")+1:]
+			// 	}
+			// 	return "", fmt.Sprintf("%s:%s():%d:", shortFile, f.Function, f.Line)
+			// },
+			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+				return "", ""
+			},
+		}
 	}
+
 	logger.SetFormatter(formatter)
 
 	if config.NoConsole {
