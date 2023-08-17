@@ -59,6 +59,8 @@ type LogConfig struct {
 	DisableCaller bool
 	// 禁用写缓冲
 	DisableWriterBuffer bool
+	// 写缓冲大小，默认4096字节
+	WriterBufferSize int
 	// 以json格式输出
 	JSONFormat bool
 	// 禁用颜色
@@ -206,7 +208,10 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	hook.LogSize = 0
 	hook.WriterLock = &sync.RWMutex{}
 	hook.LogConfig = config
-	hook.WriterBufferSize = 4096
+	hook.WriterBufferSize = config.WriterBufferSize
+	if hook.WriterBufferSize <= 0 {
+		hook.WriterBufferSize = 4096
+	}
 
 	//添加hook
 	logger.AddHook(hook)
