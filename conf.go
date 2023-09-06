@@ -31,8 +31,8 @@ const (
 
 // 日志配置,可以为空
 type LogConfig struct {
-	//日志路径(可以为空)
-	LogPath string
+	//日志保存文件夹路径(可以为空)
+	LogDir string
 	//日志文件名后缀
 	LogFileNameSuffix string
 	//默认日志文件名(若按日期或大小分割日志，此项无效)
@@ -114,12 +114,18 @@ type logHook struct {
 	dateFmt2 string
 }
 
-// 默认 --loglevel=info
+// InitGlobalLogger初始化全局logger。
+//
+// 如果存在多个logger，调用者应该保证不同logger的日志文件路径不同。
+// 默认的loglevel为info。
 func InitGlobalLogger(config LogConfig) error {
 	return initlLog(logrus.StandardLogger(), config)
 }
 
-// 默认 --loglevel=info
+// NewLogger返回一个新的logger。
+//
+// 如果存在多个logger，调用者应该保证不同logger的日志文件路径不同。
+// 默认的loglevel为info。
 func NewLogger(config LogConfig) (*logrus.Logger, error) {
 	logger := logrus.New()
 	err := initlLog(logger, config)
@@ -196,8 +202,8 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.DefaultLogName == "" {
 		config.DefaultLogName = "default"
 	}
-	if config.MaxKeepDays > 0 && config.LogPath == "" {
-		config.LogPath = DefaultSavePath
+	if config.MaxKeepDays > 0 && config.LogDir == "" {
+		config.LogDir = DefaultSavePath
 	}
 	config.keepSuffix = "keep"
 
@@ -220,9 +226,8 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if err != nil {
 		return fmt.Errorf("updateNewLogPathAndFile err:%v", err)
 	}
-	if config.MaxKeepDays > 0 && !oldLogCheckerOnline {
-		oldLogCheckerOnline = true
-		go hook.deleteOldLog()
+	if config.MaxKeepDays > 0 {
+		go hook.deleteOldLogTimer()
 	}
 	if !config.DisableWriterBuffer && !config.LogFileDisable {
 		// 隔一段时间刷新缓冲区
@@ -279,6 +284,34 @@ func FlushBuf(logger *logrus.Logger) error {
 					}
 				}
 				logHook.WriterLock.Unlock()
+			}
+		}
+	}
+	return nil
+}
+
+// 删除n天前的日志，n等于0时删除所有日志。
+func DeleteOldLog(logger *logrus.Logger, n int) error {
+	if logger == nil {
+		return nil
+	}
+	var hooksMap logrus.LevelHooks = logger.Hooks
+	if hooksMap == nil {
+		return nil
+	}
+	for _, hooks := range hooksMap {
+		if hooks == nil {
+			continue
+		}
+		for _, hook := range hooks {
+			if hook == nil {
+				continue
+			}
+			if logHook, ok := hook.(*logHook); ok {
+				if logHook == nil {
+					continue
+				}
+				logHook.deleteOldLogOnce(n)
 			}
 		}
 	}

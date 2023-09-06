@@ -194,6 +194,9 @@ func (w *lazyFileWriter) Name() string {
 func (w *lazyFileWriter) IsCreated() bool {
 	return w.file != nil
 }
+func (w *lazyFileWriter) File() *os.File {
+	return w.file
+}
 
 func newLazyFileWriter(filePath string) *lazyFileWriter {
 	return &lazyFileWriter{filePath: filePath}

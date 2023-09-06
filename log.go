@@ -32,14 +32,6 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
-	// 为debug级别的日志添加颜色
-	// if entry.Level == logrus.DebugLevel {
-	// 	defer func() {
-	// 		// \033[35m 紫色 \033[0m
-	// 		entry.Message = "\x1b[35m" + entry.Message + "\x1b[0m"
-	// 	}()
-	// }
-
 	//取消日志输出到文件
 	if hook.LogConfig.LogFileDisable {
 		return nil
@@ -184,9 +176,9 @@ func (hook *logHook) updateNewLogPathAndFile() error {
 	}
 
 	// 检查日志目录是否存在
-	if hook.LogConfig.LogPath != "" {
-		if _, err := os.Stat(hook.LogConfig.LogPath); os.IsNotExist(err) {
-			err = os.MkdirAll(hook.LogConfig.LogPath, 0755)
+	if hook.LogConfig.LogDir != "" {
+		if _, err := os.Stat(hook.LogConfig.LogDir); os.IsNotExist(err) {
+			err = os.MkdirAll(hook.LogConfig.LogDir, 0755)
 			if err != nil {
 				return err
 			}
@@ -230,7 +222,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	errorFileName = makeFileNameLegal(errorFileName)
 	commonFileName = makeFileNameLegal(commonFileName)
 
-	newPath := filepath.Join(hook.LogConfig.LogPath, hook.FileDate)
+	newPath := filepath.Join(hook.LogConfig.LogDir, hook.FileDate)
 	errorFileName = filepath.Join(newPath, errorFileName)
 	commonFileName = filepath.Join(newPath, commonFileName)
 
@@ -278,7 +270,7 @@ func (hook *logHook) openLogFile(tempFileName string) error {
 		newFileName = tempFileName + "_" + hook.LogConfig.LogFileNameSuffix + hook.LogConfig.LogExt
 	}
 	newFileName = makeFileNameLegal(newFileName)
-	newFileName = filepath.Join(hook.LogConfig.LogPath, newFileName)
+	newFileName = filepath.Join(hook.LogConfig.LogDir, newFileName)
 
 	file, err := hook.tryOpenOldLogFile(newFileName)
 	if err != nil {
@@ -306,7 +298,7 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 	}
 
 	//按大小分割
-	oldLogFiles, err := getFileNmaesInPath(hook.LogConfig.LogPath)
+	oldLogFiles, err := getFileNmaesInPath(hook.LogConfig.LogDir)
 	if err != nil {
 		return nil, err
 	}
@@ -326,12 +318,12 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 		return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	}
 	// 检查文件大小
-	fileStat, err := os.Stat(filepath.Join(hook.LogConfig.LogPath, latestLogFile))
+	fileStat, err := os.Stat(filepath.Join(hook.LogConfig.LogDir, latestLogFile))
 	if err != nil {
 		return nil, err
 	}
 	if fileStat.Size() < hook.LogConfig.MaxLogSize {
-		return os.OpenFile(filepath.Join(hook.LogConfig.LogPath, latestLogFile), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		return os.OpenFile(filepath.Join(hook.LogConfig.LogDir, latestLogFile), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	}
 	// 文件大小超过限制，新建文件
 	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -341,7 +333,7 @@ func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonF
 	if hook.LogConfig.MaxLogSize == 0 {
 		return nil, nil, false, nil
 	}
-	dirs, err := getFolderNamesInPath(hook.LogConfig.LogPath)
+	dirs, err := getFolderNamesInPath(hook.LogConfig.LogDir)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -358,14 +350,14 @@ func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonF
 		return nil, nil, false, nil
 	}
 	// 检查文件夹大小
-	folderSize, err := getFolderSize(filepath.Join(hook.LogConfig.LogPath, latestFolder))
+	folderSize, err := getFolderSize(filepath.Join(hook.LogConfig.LogDir, latestFolder))
 	if err != nil {
 		return nil, nil, false, err
 	}
 	// 直接在文件夹中创建新文件
 	if folderSize < hook.LogConfig.MaxLogSize {
-		errorFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(errorFileName))
-		commonFileName = filepath.Join(hook.LogConfig.LogPath, latestFolder, filepath.Base(commonFileName))
+		errorFileName = filepath.Join(hook.LogConfig.LogDir, latestFolder, filepath.Base(errorFileName))
+		commonFileName = filepath.Join(hook.LogConfig.LogDir, latestFolder, filepath.Base(commonFileName))
 	}
 	file := newLazyFileWriter(errorFileName)
 	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -375,29 +367,52 @@ func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonF
 	return file, file2, true, nil
 }
 
-var oldLogCheckerOnline = false
-
-func (hook *logHook) deleteOldLog() {
+func (hook *logHook) deleteOldLogTimer() {
 	for {
-		hook.deleteOldLogOnce()
+		hook.deleteOldLogOnce(hook.LogConfig.MaxKeepDays)
 		time.Sleep(time.Hour * 24)
 	}
 }
 
-// 删除过期日志
-func (hook *logHook) deleteOldLogOnce() {
-	if hook.LogConfig.MaxKeepDays <= 0 {
+// 删除过期日志(n<=0时删除所有)
+func (hook *logHook) deleteOldLogOnce(n int) {
+	if hook.LogConfig.LogDir == "" {
+		// 仅支持删除文件夹中的日志
 		return
 	}
-	hook.deleteOldLogDirOnce(hook.LogConfig.LogPath)
-	hook.deleteOldLogFileOnce(hook.LogConfig.LogPath)
+	if n <= 0 {
+		// return
+		hook.WriterLock.Lock()
+		if hook.ErrWriter != nil && hook.ErrWriter.IsCreated() {
+			path := hook.ErrWriter.Name()
+			hook.ErrWriter.Close()
+			err := os.Remove(path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "deleteOldLog os.Remove err:%v", err)
+			}
+		}
+		if hook.OtherWriter != nil {
+			path := hook.OtherWriter.Name()
+			hook.OtherWriter.Close()
+			err := os.Remove(path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "deleteOldLog os.Remove err:%v", err)
+			}
+		}
+		hook.updateNewLogPathAndFile()
+		hook.WriterLock.Unlock()
+	}
+	hook.deleteOldLogDirOnce(hook.LogConfig.LogDir, n)
+	hook.deleteOldLogFileOnce(hook.LogConfig.LogDir, n)
 }
 
-func (hook *logHook) deleteOldLogDirOnce(dir string) {
-	if hook.LogConfig.MaxKeepDays <= 0 {
-		return
-	}
-	dirs, err := getFolderNamesInPath(hook.LogConfig.LogPath)
+// 删除文件夹中n天前的日志文件夹。
+// 由于调用了logrus.Errorf，所以不要对此方法加锁，否则会死锁。
+func (hook *logHook) deleteOldLogDirOnce(dir string, n int) {
+	// if n <= 0 {
+	// 	return
+	// }
+	dirs, err := getFolderNamesInPath(hook.LogConfig.LogDir)
 	if err != nil {
 		logrus.Errorf("deleteOldLog getDirs err:%v", err)
 		return
@@ -411,9 +426,9 @@ func (hook *logHook) deleteOldLogDirOnce(dir string) {
 			logrus.Errorf("deleteOldLog time.Parse err:%v", err)
 			continue
 		}
-		if time.Since(date).Hours() > float64(hook.LogConfig.MaxKeepDays*24) {
-			dirPath := filepath.Join(hook.LogConfig.LogPath, dir)
-			hook.deleteOldLogFileOnce(dirPath)
+		if time.Since(date).Hours() > float64(n*24) {
+			dirPath := filepath.Join(hook.LogConfig.LogDir, dir)
+			hook.deleteOldLogFileOnce(dirPath, n)
 			//if dir is empty
 			if isEmptyDir(dirPath) {
 				err := os.Remove(dirPath)
@@ -425,24 +440,36 @@ func (hook *logHook) deleteOldLogDirOnce(dir string) {
 	}
 }
 
-func (hook *logHook) deleteOldLogFileOnce(dir string) {
-	if hook.LogConfig.MaxKeepDays == 0 {
-		return
-	}
+// 删除文件夹中n天前的日志文件。
+// 由于调用了logrus.Errorf，所以不要对此方法加锁，否则会死锁。
+func (hook *logHook) deleteOldLogFileOnce(dir string, n int) {
+	// if n <= 0 {
+	// 	return
+	// }
 	files, err := getFileNmaesInPath(dir)
 	if err != nil {
 		logrus.Errorf("deleteOldLog getFiles err:%v", err)
 		return
 	}
+	// var ErrWriterFilePath string
+	// var OthWriterFilePath string
+	// if hook.ErrWriter != nil {
+	// 	ErrWriterFilePath, _ = filepath.Abs(hook.ErrWriter.Name())
+	// }
+	// if hook.OtherWriter != nil {
+	// 	OthWriterFilePath, _ = filepath.Abs(hook.OtherWriter.Name())
+	// }
 	for _, fileName := range files {
 		if strings.HasSuffix(fileName, hook.LogConfig.keepSuffix) {
 			continue
 		}
-		fileName = strings.ToLower(fileName)
-		if hook.ErrWriter != nil && fileName == strings.ToLower(hook.ErrWriter.Name()) {
+		// fileAbsPath, _ := filepath.Abs(filepath.Join(dir, fileName))
+		// fileAbsPath = strings.ToLower(fileAbsPath)
+		tempFileName := strings.ToLower(fileName)
+		if hook.ErrWriter != nil && tempFileName == strings.ToLower(filepath.Base(hook.ErrWriter.Name())) {
 			continue
 		}
-		if hook.OtherWriter != nil && fileName == strings.ToLower(hook.OtherWriter.Name()) {
+		if hook.OtherWriter != nil && tempFileName == strings.ToLower(filepath.Base(hook.OtherWriter.Name())) {
 			continue
 		}
 		// 最后修改时间
@@ -451,7 +478,7 @@ func (hook *logHook) deleteOldLogFileOnce(dir string) {
 			logrus.Errorf("deleteOldLog os.Stat err:%v", err)
 			continue
 		}
-		if time.Since(fileInfo.ModTime()).Hours() > float64(hook.LogConfig.MaxKeepDays*24) {
+		if time.Since(fileInfo.ModTime()).Hours() > float64(n*24) {
 			err := os.Remove(filepath.Join(dir, fileName))
 			if err != nil {
 				logrus.Errorf("deleteOldLog os.Remove err:%v", err)
