@@ -30,7 +30,8 @@ func init() {
 		//DisableCaller: true, //关闭调用者信息
 		// DisableColors: true, //关闭颜色
 		// JSONFormat:  true, //json格式
-		MaxKeepDays: 1,
+		MaxKeepDays:         1,
+		DisableWriterBuffer: true,
 	}
 	config.SetKeyValue("server", "[DEBUG]")
 	err := mylog.InitGlobalLogger(config)
