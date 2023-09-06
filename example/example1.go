@@ -12,7 +12,7 @@ import (
 
 func init() {
 	config := mylog.LogConfig{
-		LogPath:  `./test_log`,
+		LogDir:   `./test_log`,
 		LogLevel: "trace",
 		//LogFileNameSuffix: "test",
 		//LogExt:            "log",
