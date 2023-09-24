@@ -76,7 +76,7 @@ import (
 
 func init() {
 	config := mylog.LogConfig{
-		LogPath:             `./test_log`,
+		LogDir:             `./test_log`,
 		LogLevel:            "trace",
 		ErrSeparate:         true, //错误日志是否单独输出到文件
 		DateSplit:           true, //是否按日期分割日志
