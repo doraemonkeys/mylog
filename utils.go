@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -156,21 +157,25 @@ func timeStringCompare(time1, time2, format string) int {
 type lazyFileWriter struct {
 	filePath string
 	file     *os.File
+	once     *sync.Once
 }
 
 func (w *lazyFileWriter) Write(p []byte) (n int, err error) {
-	if w.file == nil {
+	w.once.Do(func() {
 		w.file, err = os.OpenFile(w.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return 0, err
+			logrus.Errorf("open file error:%v", err)
 		}
-	}
+	})
 	return w.file.Write(p)
 }
 
 func (w *lazyFileWriter) Close() error {
+	// 不建议并发的关闭文件
+	f := w.file
 	if w.file != nil {
-		return w.file.Close()
+		w.file = nil
+		return f.Close()
 	}
 	return nil
 }
@@ -199,9 +204,5 @@ func (w *lazyFileWriter) File() *os.File {
 }
 
 func newLazyFileWriter(filePath string) *lazyFileWriter {
-	return &lazyFileWriter{filePath: filePath}
+	return &lazyFileWriter{filePath: filePath, once: &sync.Once{}}
 }
-
-// func newLazyFileWriterWithFile(filePath string, file *os.File) *LazyFileWriter {
-// 	return &LazyFileWriter{filePath: filePath, file: file}
-// }
