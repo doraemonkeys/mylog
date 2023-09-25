@@ -33,7 +33,7 @@ func init() {
 		MaxKeepDays:         1,
 		DisableWriterBuffer: true,
 	}
-	config.SetKeyValue("server", "[DEBUG]")
+	config.SetKeyValue("foo", "bar")
 	err := mylog.InitGlobalLogger(config)
 	if err != nil {
 		panic(err)

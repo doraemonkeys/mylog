@@ -4,12 +4,55 @@
 
 
 
+## QuickStart
+
+```
+go get -u github.com/doraemonkeys/mylog
+```
+
+
+
+```go
+package main
+
+import (
+	"github.com/doraemonkeys/mylog"
+	"github.com/sirupsen/logrus"
+)
+
+func init() {
+	config := mylog.LogConfig{
+		LogDir:             `./test_log`,
+		LogLevel:            "trace",
+		ErrSeparate:         true, //错误日志是否单独输出到文件
+		DateSplit:           true, //是否按日期分割日志
+		DisableWriterBuffer: true, //是否禁用写缓存
+		MaxKeepDays:         1,
+	}
+	config.SetKeyValue("foo", "bar")
+	err := mylog.InitGlobalLogger(config)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func main() {
+	logrus.Trace("trace")
+	logrus.Debug("debug")
+	logrus.Info("info")
+	logrus.Warn("warn")
+	logrus.Error("error")
+}
+```
+
+
+
 ## 配置预览
 
 ```go
 type LogConfig struct {
-	//日志路径(可以为空)
-	LogPath string
+	//日志保存文件夹路径(可以为空)
+	LogDir string
 	//日志文件名后缀
 	LogFileNameSuffix string
 	//默认日志文件名(若按日期或大小分割日志，此项无效)
@@ -36,6 +79,12 @@ type LogConfig struct {
 	DisableCaller bool
 	// 禁用写缓冲
 	DisableWriterBuffer bool
+	// 写缓冲大小，默认4096字节
+	WriterBufferSize int
+	// 以json格式输出
+	JSONFormat bool
+	// 禁用颜色
+	DisableColors bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
@@ -55,49 +104,4 @@ type LogConfig struct {
 	keepSuffix string
 }
 ```
-
-
-
-## QuickStart
-
-```
-go get -u github.com/doraemonkeys/mylog
-```
-
-
-
-```go
-package main
-
-import (
-	"github.com/doraemonkeys/mylog"
-	"github.com/sirupsen/logrus"
-)
-
-func init() {
-	config := mylog.LogConfig{
-		LogDir:             `./test_log`,
-		LogLevel:            "trace",
-		ErrSeparate:         true, //错误日志是否单独输出到文件
-		DateSplit:           true, //是否按日期分割日志
-		DisableWriterBuffer: true, //是否禁用写缓存
-		MaxKeepDays:         1,
-	}
-	config.SetKeyValue("server", "[DEBUG]")
-	err := mylog.InitGlobalLogger(config)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func main() {
-	logrus.Trace("trace")
-	logrus.Debug("debug")
-	logrus.Info("info")
-	logrus.Warn("warn")
-	logrus.Error("error")
-}
-```
-
-
 
