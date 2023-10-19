@@ -28,13 +28,41 @@ func getShortFileName(file string, lineInfo string) string {
 func eliminateColor(line []byte) []byte {
 	//"\033[31m 红色 \033[0m"
 	if bytes.Contains(line, []byte("\x1b[0m")) {
-		line = bytes.ReplaceAll(line, []byte("\x1b[0m"), []byte(""))
-
-		index := bytes.Index(line, []byte("\x1b[")) //找到\x1b[的位置
-		for index >= 0 && index+5 < len(line) {
-			line = bytes.ReplaceAll(line, line[index:index+5], []byte("")) //删除\x1b[31m
-			index = bytes.Index(line, []byte("\x1b["))
+		buf := make([]byte, 0, len(line))
+		start := 0
+		var end int
+		for {
+			index := bytes.Index(line[start:], []byte("\x1b[")) //找到\x1b[的位置
+			if index < 0 {
+				buf = append(buf, line[start:]...)
+				break
+			}
+			end = start + index
+			buf = append(buf, line[start:end]...)
+			// end的位置是\x1b的位置，end + 3 与 end + 4 一个是\x1b[0m，一个是\x1b[31m，以此类推，
+			// 如果 end + 4 <= line.len()或者end + 5 <= line.len() 都不成立，
+			// 说明字符串含有\x1b，但是\x1b[0m或者\x1b[31m不完整，或许不是颜色字符串。
+			tempIndex := end + 3
+			for tempIndex < len(line) && tempIndex <= end+6 {
+				if line[tempIndex] == 'm' {
+					start = tempIndex + 1
+					break
+				}
+				tempIndex++
+			}
+			if tempIndex == len(line) || tempIndex > end+6 {
+				logrus.Warnf("'m' not found in line[%d..%d]\n", end+3, end+6)
+				return line
+			}
+			if start == len(line) {
+				break
+			}
+			if start > len(line) {
+				logrus.Warnf("start: %d > line.len(): %d\n", start, len(line))
+				return line
+			}
 		}
+		return buf
 	}
 	return line
 }
