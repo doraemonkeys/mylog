@@ -57,7 +57,12 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 		defer hook.WriterLock.RUnlock()
 	} else {
 		hook.WriterLock.Lock()
-		defer hook.WriterLock.Unlock()
+		defer func() {
+			if entry.Level == logrus.PanicLevel || entry.Level == logrus.FatalLevel {
+				hook.OtherBufWriter.Flush()
+			}
+			hook.WriterLock.Unlock()
+		}()
 	}
 
 	if hook.ErrWriter != nil && entry.Level <= logrus.ErrorLevel {
