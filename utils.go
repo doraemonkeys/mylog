@@ -199,9 +199,8 @@ func (w *lazyFileWriter) Write(p []byte) (n int, err error) {
 }
 
 func (w *lazyFileWriter) Close() error {
-	// 不建议并发的关闭文件
 	f := w.file
-	if w.file != nil {
+	if f != nil {
 		w.file = nil
 		return f.Close()
 	}
