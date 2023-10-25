@@ -101,9 +101,9 @@ type logHook struct {
 	WriterBufferSize int
 	// 写入ErrWriter和OtherWriter是加读锁防止被修改为nil或close(因为暂且认为写入文件的操作是线程安全的)。
 	// 写入OtherBufWriter加写锁，因为bufio并发不安全。
-	WriterLock    *sync.RWMutex
-	LastWriteTime time.Time
-	LogConfig     LogConfig
+	WriterLock          *sync.RWMutex
+	LastBufferWroteTime time.Time
+	LogConfig           LogConfig
 	// 2006_01_02
 	FileDate string
 	// byte,仅在SizeSplit>0时有效
@@ -239,7 +239,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 func (hook *logHook) flushBufferTimer(d time.Duration) {
 	ticker := time.NewTicker(d)
 	for range ticker.C {
-		if hook.OtherBufWriter.Buffered() > 0 && time.Since(hook.LastWriteTime) > d {
+		if hook.OtherBufWriter.Buffered() > 0 && time.Since(hook.LastBufferWroteTime) > d {
 			hook.WriterLock.Lock()
 			if hook.OtherBufWriter != nil {
 				// 此处不用更新LastWriteTime，因为ticker是固定时间间隔触发的，
