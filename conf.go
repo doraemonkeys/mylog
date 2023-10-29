@@ -275,15 +275,17 @@ func FlushBuf(logger *logrus.Logger) error {
 				if logHook == nil {
 					continue
 				}
-				logHook.WriterLock.Lock()
-				if logHook.OtherBufWriter != nil && logHook.OtherBufWriter.Buffered() > 0 {
-					err := logHook.OtherBufWriter.Flush()
-					if err != nil {
-						logHook.WriterLock.Unlock()
-						return err
+				if logHook.OtherBufWriter != nil {
+					logHook.WriterLock.Lock()
+					if logHook.OtherBufWriter != nil && logHook.OtherBufWriter.Buffered() > 0 {
+						err := logHook.OtherBufWriter.Flush()
+						if err != nil {
+							logHook.WriterLock.Unlock()
+							return err
+						}
 					}
+					logHook.WriterLock.Unlock()
 				}
-				logHook.WriterLock.Unlock()
 			}
 		}
 	}
