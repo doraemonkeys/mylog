@@ -404,6 +404,9 @@ func (hook *logHook) deleteOldLogOnce(n int) {
 	if n <= 0 {
 		// return
 		hook.WriterLock.Lock()
+		if hook.OtherBufWriter != nil {
+			hook.OtherBufWriter.Flush()
+		}
 		if hook.ErrWriter != nil && hook.ErrWriter.IsCreated() {
 			path := hook.ErrWriter.Name()
 			hook.ErrWriter.Close()
