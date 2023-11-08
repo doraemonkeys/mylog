@@ -65,6 +65,11 @@ type LogConfig struct {
 	JSONFormat bool
 	// 禁用颜色
 	DisableColors bool
+	// Disables the truncation of the level text to 4 characters.
+	DisableLevelTruncation bool
+	// PadLevelText Adds padding the level text so that all the levels
+	// output at the same length PadLevelText is a superset of the DisableLevelTruncation option
+	PadLevelText bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
@@ -165,10 +170,12 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 		}
 	} else {
 		formatter = &myformatter.TextFormatter{
-			TimestampFormat:  config.TimestampFormat, //时间戳格式
-			FullTimestamp:    true,
-			DisableTimestamp: config.NoTimestamp,    //开启时间戳
-			ForceColors:      !config.DisableColors, //开启颜色
+			TimestampFormat:        config.TimestampFormat, //时间戳格式
+			FullTimestamp:          true,
+			DisableTimestamp:       config.NoTimestamp,    //开启时间戳
+			ForceColors:            !config.DisableColors, //开启颜色
+			DisableLevelTruncation: config.DisableLevelTruncation,
+			PadLevelText:           config.PadLevelText,
 			// CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 			// 	//返回shortfile,funcname,linenum
 			// 	//main.go:main:12

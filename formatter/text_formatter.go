@@ -25,6 +25,8 @@ const (
 	gray   = 37
 )
 
+const WarnLevelString = "WARN"
+
 var baseTimestamp time.Time
 
 func init() {
@@ -113,7 +115,11 @@ func (f *TextFormatter) init(entry *Entry) {
 	}
 	// Get the max length of the level text
 	for _, level := range logrus.AllLevels {
-		levelTextLength := utf8.RuneCount([]byte(level.String()))
+		levelText := level.String()
+		if level == logrus.WarnLevel {
+			levelText = WarnLevelString
+		}
+		levelTextLength := utf8.RuneCount([]byte(levelText))
 		if levelTextLength > f.levelTextMaxLength {
 			f.levelTextMaxLength = levelTextLength
 		}
@@ -255,6 +261,9 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *Entry, keys []strin
 	}
 
 	levelText := strings.ToUpper(entry.Level.String())
+	if entry.Level == logrus.WarnLevel {
+		levelText = WarnLevelString
+	}
 	if !f.DisableLevelTruncation && !f.PadLevelText {
 		levelText = levelText[0:4]
 	}
