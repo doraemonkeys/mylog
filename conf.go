@@ -238,7 +238,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	}
 	if !config.DisableWriterBuffer && !config.LogFileDisable {
 		// 隔一段时间刷新缓冲区
-		go hook.flushBufferTimer(time.Second * 5)
+		go hook.flushBufferTimer(time.Second * 3)
 	}
 	return nil
 }
