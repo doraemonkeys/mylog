@@ -39,8 +39,8 @@ type LogConfig struct {
 	DefaultLogName string
 	//是否分离错误日志(Error级别以上)
 	ErrSeparate bool
-	//如果分离错误日志，普通日志文件是否仍然包含错误日志
-	ErrInNormal bool
+	//使普通日志文件不包含错误日志(分离错误日志时有效)
+	ErrNotInNormal bool
 	//按日期分割日志(不能和按大小分割同时使用)
 	DateSplit bool
 	//取消日志输出到文件

@@ -71,7 +71,7 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 			fmt.Fprintf(os.Stderr, "Unable to write error to the file, %v", err)
 			return err
 		}
-		if !hook.LogConfig.ErrInNormal {
+		if hook.LogConfig.ErrNotInNormal {
 			return nil
 		}
 	}
