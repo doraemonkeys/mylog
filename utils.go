@@ -12,6 +12,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// 文件夹是否存在
+func DirIsExist(path string) bool {
+	f, err := os.Stat(path)
+	if err != nil {
+		return os.IsExist(err)
+	}
+	if f.IsDir() {
+		return true
+	}
+	return false
+}
+
 // D:\xxx\yyy\yourproject\pkg\log\log.go -> log.go:123
 func getShortFileName(file string, lineInfo string) string {
 	file = strings.Replace(file, "\\", "/", -1)

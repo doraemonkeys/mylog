@@ -100,7 +100,9 @@ type logHook struct {
 	ErrWriter *lazyFileWriter
 	// 暂且认为写入文件的操作是线程安全的
 	OtherWriter *os.File
-	// bufio 并发不安全
+	// bufio 并发不安全。
+	// buffer+Mutex写入文件性能比channel高，
+	// 但是channel更灵活性能也足够，还不用手动刷新，所以这里本来应该使用channel。
 	OtherBufWriter *bufio.Writer
 	// 默认4096
 	WriterBufferSize int

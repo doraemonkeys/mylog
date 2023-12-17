@@ -193,8 +193,8 @@ func (hook *logHook) updateNewLogPathAndFile() error {
 
 	// 检查日志目录是否存在
 	if hook.LogConfig.LogDir != "" {
-		if _, err := os.Stat(hook.LogConfig.LogDir); os.IsNotExist(err) {
-			err = os.MkdirAll(hook.LogConfig.LogDir, 0755)
+		if !DirIsExist(hook.LogConfig.LogDir) {
+			err := os.MkdirAll(hook.LogConfig.LogDir, 0755)
 			if err != nil {
 				return err
 			}
