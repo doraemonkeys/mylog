@@ -445,9 +445,14 @@ func (hook *logHook) deleteOldLogDirOnce(dir string, n int) {
 		if strings.HasSuffix(dir, hook.LogConfig.keepSuffix) {
 			continue
 		}
-		date, err := time.Parse(hook.dateFmt, dir)
+		var dirNameTime = dir
+		if len(dir) > len(hook.dateFmt) {
+			dirNameTime = dir[0:len(hook.dateFmt)]
+		}
+		date, err := time.Parse(hook.dateFmt, dirNameTime)
 		if err != nil {
-			logrus.Errorf("deleteOldLog time.Parse err:%v", err)
+			// logrus.Errorf("deleteOldLog time.Parse err:%v", err)
+			// can not parse dir to time, ignore
 			continue
 		}
 		if time.Since(date).Hours() > float64(n*24) {
