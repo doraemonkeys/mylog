@@ -57,8 +57,8 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	// 关闭调用者信息
 	DisableCaller bool
-	// 禁用写缓冲
-	DisableWriterBuffer bool
+	// 启用写缓冲
+	EnableWriterBuffer bool
 	// 写缓冲大小，默认4096字节
 	WriterBufferSize int
 	// 以json格式输出
@@ -238,7 +238,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.MaxKeepDays > 0 {
 		go hook.deleteOldLogTimer()
 	}
-	if !config.DisableWriterBuffer && !config.LogFileDisable {
+	if config.EnableWriterBuffer && !config.LogFileDisable {
 		// 隔一段时间刷新缓冲区
 		go hook.flushBufferTimer(time.Second * 3)
 	}

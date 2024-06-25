@@ -26,7 +26,6 @@ func init() {
 		LogLevel:            "trace",
 		ErrSeparate:         true, //错误日志是否单独输出到文件
 		DateSplit:           true, //是否按日期分割日志
-		DisableWriterBuffer: true, //是否禁用写缓存
 		MaxKeepDays:         1,
 	}
 	config.SetKeyValue("foo", "bar")
@@ -59,8 +58,8 @@ type LogConfig struct {
 	DefaultLogName string
 	//是否分离错误日志(Error级别以上)
 	ErrSeparate bool
-	//如果分离错误日志，普通日志文件是否仍然包含错误日志
-	ErrInNormal bool
+	//使普通日志文件不包含错误日志(分离错误日志时有效)
+	ErrNotInNormal bool
 	//按日期分割日志(不能和按大小分割同时使用)
 	DateSplit bool
 	//取消日志输出到文件
@@ -77,14 +76,19 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	// 关闭调用者信息
 	DisableCaller bool
-	// 禁用写缓冲
-	DisableWriterBuffer bool
+	// 启用写缓冲
+	EnableWriterBuffer bool
 	// 写缓冲大小，默认4096字节
 	WriterBufferSize int
 	// 以json格式输出
 	JSONFormat bool
 	// 禁用颜色
 	DisableColors bool
+	// Disables the truncation of the level text to 4 characters.
+	DisableLevelTruncation bool
+	// PadLevelText Adds padding the level text so that all the levels
+	// output at the same length PadLevelText is a superset of the DisableLevelTruncation option
+	PadLevelText bool
 	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
 	MaxLogSize int64
 	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。

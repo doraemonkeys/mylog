@@ -50,7 +50,7 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	hook.checkSplit()
 
 	// ------------------- 加锁写入文件/缓冲 -------------------
-	if hook.LogConfig.DisableWriterBuffer {
+	if !hook.LogConfig.EnableWriterBuffer {
 		hook.WriterLock.RLock()
 		defer hook.WriterLock.RUnlock()
 	} else {
@@ -81,16 +81,16 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherWriter and OtherBufWriter are both nil")
 		return errors.New("unexpected error, OtherWriter and OtherBufWriter are both nil")
 	}
-	if hook.LogConfig.DisableWriterBuffer && hook.OtherWriter == nil {
+	if !hook.LogConfig.EnableWriterBuffer && hook.OtherWriter == nil {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherWriter is nil when DisableWriterBuffer is true")
 		return errors.New("unexpected error, OtherWriter is nil when DisableWriterBuffer is true")
 	}
-	if !hook.LogConfig.DisableWriterBuffer && hook.OtherBufWriter == nil {
+	if hook.LogConfig.EnableWriterBuffer && hook.OtherBufWriter == nil {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherBufWriter is nil when DisableWriterBuffer is false")
 		return errors.New("unexpected error, OtherBufWriter is nil when DisableWriterBuffer is false")
 	}
 
-	if hook.LogConfig.DisableWriterBuffer {
+	if !hook.LogConfig.EnableWriterBuffer {
 		_, err := hook.OtherWriter.Write(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to write log to the file, %v", err)
@@ -248,7 +248,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 		ok       bool
 		err      error
 	)
-	lazyFile, file2, ok, err = hook.tryOpenTwoOldLogFile(newPath, errorFileName, commonFileName)
+	lazyFile, file2, ok, err = hook.tryOpenTwoOldLogFile(errorFileName, commonFileName)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	} else {
 		hook.LogSize = 0
 	}
-	if hook.LogConfig.DisableWriterBuffer {
+	if !hook.LogConfig.EnableWriterBuffer {
 		hook.OtherWriter = file2
 	} else {
 		hook.OtherBufWriter = bufio.NewWriterSize(file2, hook.WriterBufferSize)
@@ -295,7 +295,7 @@ func (hook *logHook) openLogFile(tempFileName string) error {
 		return err
 	}
 
-	if hook.LogConfig.DisableWriterBuffer {
+	if !hook.LogConfig.EnableWriterBuffer {
 		hook.OtherWriter = file
 	} else {
 		hook.OtherBufWriter = bufio.NewWriterSize(file, hook.WriterBufferSize)
@@ -350,7 +350,7 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 }
 
-func (hook *logHook) tryOpenTwoOldLogFile(newPath string, errorFileName, commonFileName string) (*lazyFileWriter, *os.File, bool, error) {
+func (hook *logHook) tryOpenTwoOldLogFile(errorFileName, commonFileName string) (*lazyFileWriter, *os.File, bool, error) {
 	if hook.LogConfig.MaxLogSize == 0 {
 		return nil, nil, false, nil
 	}
@@ -436,7 +436,7 @@ func (hook *logHook) deleteOldLogDirOnce(dir string, n int) {
 	// if n <= 0 {
 	// 	return
 	// }
-	dirs, err := getFolderNamesInPath(hook.LogConfig.LogDir)
+	dirs, err := getFolderNamesInPath(dir)
 	if err != nil {
 		logrus.Errorf("deleteOldLog getDirs err:%v", err)
 		return
