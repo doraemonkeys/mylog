@@ -50,20 +50,16 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	hook.checkSplit()
 
 	// ------------------- 加锁写入文件/缓冲 -------------------
-	// if hook.LogConfig.DisableWriterBuffer {
-	// 	hook.WriterLock.RLock()
-	// 	defer hook.WriterLock.RUnlock()
-	// } else {
-	// 	hook.WriterLock.Lock()
-	// 	defer func() {
-	// 		if entry.Level == logrus.PanicLevel || entry.Level == logrus.FatalLevel {
-	// 			hook.OtherBufWriter.Flush()
-	// 		}
-	// 		hook.WriterLock.Unlock()
-	// 	}()
-	// }
 	hook.WriterLock.RLock()
-	defer hook.WriterLock.RUnlock()
+	defer func() {
+		hook.WriterLock.RUnlock()
+		if !hook.LogConfig.DisableWriterBuffer &&
+			(entry.Level == logrus.PanicLevel || entry.Level == logrus.FatalLevel) {
+			hook.WriterLock.Lock()
+			_ = hook.OtherBufWriter.Flush()
+			hook.WriterLock.Unlock()
+		}
+	}()
 
 	if hook.ErrWriter != nil && entry.Level <= logrus.ErrorLevel {
 		// 单独输出的错误日志也算在日志大小限制内
