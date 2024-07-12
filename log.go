@@ -18,7 +18,7 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 		entry.Data[hook.LogConfig.key] = hook.LogConfig.value
 	}
 
-	if !hook.LogConfig.DisableCaller {
+	if !hook.LogConfig.DisableCaller && entry.Caller != nil {
 		file := entry.Caller.File
 		file = getShortFileName(file, fmt.Sprint(entry.Caller.Line))
 		entry.Data["FILE"] = file
@@ -50,18 +50,20 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	hook.checkSplit()
 
 	// ------------------- 加锁写入文件/缓冲 -------------------
-	if !hook.LogConfig.EnableWriterBuffer {
-		hook.WriterLock.RLock()
-		defer hook.WriterLock.RUnlock()
-	} else {
-		hook.WriterLock.Lock()
-		defer func() {
-			if entry.Level == logrus.PanicLevel || entry.Level == logrus.FatalLevel {
-				hook.OtherBufWriter.Flush()
-			}
-			hook.WriterLock.Unlock()
-		}()
-	}
+	// if hook.LogConfig.DisableWriterBuffer {
+	// 	hook.WriterLock.RLock()
+	// 	defer hook.WriterLock.RUnlock()
+	// } else {
+	// 	hook.WriterLock.Lock()
+	// 	defer func() {
+	// 		if entry.Level == logrus.PanicLevel || entry.Level == logrus.FatalLevel {
+	// 			hook.OtherBufWriter.Flush()
+	// 		}
+	// 		hook.WriterLock.Unlock()
+	// 	}()
+	// }
+	hook.WriterLock.RLock()
+	defer hook.WriterLock.RUnlock()
 
 	if hook.ErrWriter != nil && entry.Level <= logrus.ErrorLevel {
 		// 单独输出的错误日志也算在日志大小限制内
@@ -81,28 +83,23 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherWriter and OtherBufWriter are both nil")
 		return errors.New("unexpected error, OtherWriter and OtherBufWriter are both nil")
 	}
-	if !hook.LogConfig.EnableWriterBuffer && hook.OtherWriter == nil {
+	if hook.LogConfig.DisableWriterBuffer && hook.OtherWriter == nil {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherWriter is nil when DisableWriterBuffer is true")
 		return errors.New("unexpected error, OtherWriter is nil when DisableWriterBuffer is true")
 	}
-	if hook.LogConfig.EnableWriterBuffer && hook.OtherBufWriter == nil {
+	if !hook.LogConfig.DisableWriterBuffer && hook.OtherBufWriter == nil {
 		fmt.Fprintf(os.Stderr, "Unexpected error, OtherBufWriter is nil when DisableWriterBuffer is false")
 		return errors.New("unexpected error, OtherBufWriter is nil when DisableWriterBuffer is false")
 	}
 
-	if !hook.LogConfig.EnableWriterBuffer {
+	if hook.LogConfig.DisableWriterBuffer {
 		_, err := hook.OtherWriter.Write(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to write log to the file, %v", err)
 			return err
 		}
 	} else {
-		_, err := hook.OtherBufWriter.Write(line)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to write log to the buffer, %v", err)
-			return err
-		}
-		hook.LastBufferWroteTime = time.Now()
+		hook.bufferQueue.Push(line)
 	}
 
 	hook.LogSize += int64(len(line))
@@ -270,7 +267,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	} else {
 		hook.LogSize = 0
 	}
-	if !hook.LogConfig.EnableWriterBuffer {
+	if hook.LogConfig.DisableWriterBuffer {
 		hook.OtherWriter = file2
 	} else {
 		hook.OtherBufWriter = bufio.NewWriterSize(file2, hook.WriterBufferSize)
@@ -295,7 +292,7 @@ func (hook *logHook) openLogFile(tempFileName string) error {
 		return err
 	}
 
-	if !hook.LogConfig.EnableWriterBuffer {
+	if hook.LogConfig.DisableWriterBuffer {
 		hook.OtherWriter = file
 	} else {
 		hook.OtherBufWriter = bufio.NewWriterSize(file, hook.WriterBufferSize)

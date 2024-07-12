@@ -1,3 +1,5 @@
 test_log/*
 logrus/*
 *.txt
+z_test/*
+*.log

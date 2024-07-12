@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/doraemonkeys/doraemon"
 	myformatter "github.com/doraemonkeys/mylog/formatter"
 	"github.com/sirupsen/logrus"
 )
@@ -57,8 +58,8 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	// 关闭调用者信息
 	DisableCaller bool
-	// 启用写缓冲
-	EnableWriterBuffer bool
+	// 禁用写缓冲
+	DisableWriterBuffer bool
 	// 写缓冲大小，默认4096字节
 	WriterBufferSize int
 	// 以json格式输出
@@ -96,21 +97,21 @@ func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 }
 
 type logHook struct {
-	// 暂且认为写入文件的操作是线程安全的
+	// 写入文件的操作是线程安全的
 	ErrWriter *lazyFileWriter
-	// 暂且认为写入文件的操作是线程安全的
+	// 写入文件的操作是线程安全的
 	OtherWriter *os.File
-	// bufio 并发不安全。
-	// buffer+Mutex写入文件性能比channel高，
-	// 但是channel更灵活性能也足够，还不用手动刷新，所以这里本来应该使用channel。
+	// bufio 并发不安全，只在一个goroutine中写入
 	OtherBufWriter *bufio.Writer
 	// 默认4096
 	WriterBufferSize int
-	// 写入ErrWriter和OtherWriter是加读锁防止被修改为nil或close(因为暂且认为写入文件的操作是线程安全的)。
-	// 写入OtherBufWriter加写锁，因为bufio并发不安全。
-	WriterLock          *sync.RWMutex
-	LastBufferWroteTime time.Time
-	LogConfig           LogConfig
+	// 写入ErrWriter、OtherWriter、OtherBufWriter 加读锁防止被修改为nil或close(因为暂且认为写入文件的操作是线程安全的)。
+	WriterLock *sync.RWMutex
+
+	// LastBufferWroteTime time.Time
+
+	bufferQueue *doraemon.SimpleMQ[[]byte]
+	LogConfig   LogConfig
 	// 2006_01_02
 	FileDate string
 	// byte,仅在SizeSplit>0时有效
@@ -217,6 +218,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	config.keepSuffix = "keep"
 
 	hook := &logHook{}
+	hook.bufferQueue = doraemon.NewSimpleMQ[[]byte](10)
 	hook.dateFmt = "2006_01_02"
 	hook.dateFmt2 = "2006_01_02_150405"
 	hook.FileDate = time.Now().In(config.TimeLocation).Format(hook.dateFmt)
@@ -238,29 +240,31 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.MaxKeepDays > 0 {
 		go hook.deleteOldLogTimer()
 	}
-	if config.EnableWriterBuffer && !config.LogFileDisable {
-		// 隔一段时间刷新缓冲区
-		go hook.flushBufferTimer(time.Second * 3)
+	if !config.DisableWriterBuffer && !config.LogFileDisable {
+		go hook.bufferFlusher()
 	}
 	return nil
 }
 
-func (hook *logHook) flushBufferTimer(d time.Duration) {
-	ticker := time.NewTicker(d)
-	for range ticker.C {
-		if hook.OtherBufWriter.Buffered() > 0 && time.Since(hook.LastBufferWroteTime) > d {
-			hook.WriterLock.Lock()
-			if hook.OtherBufWriter != nil {
-				// 此处不用更新LastWriteTime，因为ticker是固定时间间隔触发的，
-				// 如果在等待ticker触发时，buffer满了导致写入日志文件，那么LastWriteTime会被更新。
-				// 否则由此处定时触发写入日志文件。
-				err := hook.OtherBufWriter.Flush()
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "flushBufferTimer err:", err)
-				}
+// 刷新缓冲区
+func (hook *logHook) bufferFlusher() {
+	for {
+		lines := hook.bufferQueue.WaitPopAll()
+		hook.WriterLock.RLock()
+		for i := 0; i < len(*lines); i++ {
+			_, err := hook.OtherBufWriter.Write((*lines)[i])
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "bufferFlusher Write err:", err)
 			}
-			hook.WriterLock.Unlock()
 		}
+		if hook.bufferQueue.IsEmptyNoLock() {
+			err := hook.OtherBufWriter.Flush()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "flushBuffer err:", err)
+			}
+		}
+		hook.WriterLock.RUnlock()
+		hook.bufferQueue.RecycleBuffer(lines)
 	}
 }
 
