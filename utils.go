@@ -24,13 +24,17 @@ func DirIsExist(path string) bool {
 	return false
 }
 
-// D:\xxx\yyy\yourproject\pkg\log\log.go -> log.go:123
+// D:\xxx\yyy\yourproject\pkg\log\log.go -> log\log.go:123
 func getShortFileName(file string, lineInfo string) string {
 	file = strings.Replace(file, "\\", "/", -1)
+	n := 0
 	for i := len(file) - 1; i >= 0; i-- {
 		if file[i] == '/' {
-			file = file[i+1:]
-			break
+			n++
+			if n >= 2 {
+				file = file[i+1:]
+				break
+			}
 		}
 	}
 	return file + ":" + lineInfo

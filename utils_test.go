@@ -29,3 +29,26 @@ func Test_eliminateColor(t *testing.T) {
 		})
 	}
 }
+
+func Test_getShortFileName(t *testing.T) {
+	tests := []struct {
+		file     string
+		lineInfo string
+		expected string
+	}{
+		{"C:/Users/Example/project/main.go", "10", "project/main.go:10"},
+		{"C:\\Users\\Example\\project\\main.go", "20", "project/main.go:20"},
+		{"/home/user/project/main.go", "30", "project/main.go:30"},
+		{"project/main.go", "40", "project/main.go:40"},
+		{"main.go", "50", "main.go:50"},
+		{"main", "50", "main:50"},
+		{"", "50", ":50"},
+	}
+
+	for _, test := range tests {
+		result := getShortFileName(test.file, test.lineInfo)
+		if result != test.expected {
+			t.Errorf("For file %s and lineInfo %s, expected %s but got %s", test.file, test.lineInfo, test.expected, result)
+		}
+	}
+}
