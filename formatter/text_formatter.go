@@ -223,7 +223,7 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			case key == f.FieldMap.resolve(logrus.FieldKeyTime):
 				value = entry.Time.Format(timestampFormat)
 			case key == f.FieldMap.resolve(logrus.FieldKeyLevel):
-				value = entry.Level.String()
+				value = strings.ToUpper(entry.Level.String())
 			case key == f.FieldMap.resolve(logrus.FieldKeyMsg):
 				value = entry.Message
 			case key == f.FieldMap.resolve(logrus.FieldKeyLogrusError):
