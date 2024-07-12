@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -122,18 +123,12 @@ type logHook struct {
 	dateFmt2 string
 }
 
-// InitGlobalLogger初始化全局logger。
-//
-// 如果存在多个logger，调用者应该保证不同logger的日志文件路径不同。
-// 默认的loglevel为info。
+// InitGlobalLogger initializes the global logger.The global logger is the default logger of logrus.
 func InitGlobalLogger(config LogConfig) error {
 	return initlLog(logrus.StandardLogger(), config)
 }
 
-// NewLogger返回一个新的logger。
-//
-// 如果存在多个logger，调用者应该保证不同logger的日志文件路径不同。
-// 默认的loglevel为info。
+// NewLogger creates a new logger.
 func NewLogger(config LogConfig) (*logrus.Logger, error) {
 	logger := logrus.New()
 	err := initlLog(logger, config)
@@ -142,6 +137,8 @@ func NewLogger(config LogConfig) (*logrus.Logger, error) {
 	}
 	return logger, nil
 }
+
+var logDirsMap = make(map[string]bool)
 
 func initlLog(logger *logrus.Logger, config LogConfig) error {
 
@@ -215,6 +212,13 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	if config.MaxKeepDays > 0 && config.LogDir == "" {
 		config.LogDir = DefaultSavePath
 	}
+
+	if logDirsMap[filepath.Clean(config.LogDir)] {
+		return fmt.Errorf("logDir:%s has been used", config.LogDir)
+	} else {
+		logDirsMap[filepath.Clean(config.LogDir)] = true
+	}
+
 	config.keepSuffix = "keep"
 
 	hook := &logHook{}
