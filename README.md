@@ -76,8 +76,6 @@ type LogConfig struct {
 	ShowFuncInConsole bool
 	// 关闭调用者信息
 	DisableCaller bool
-	// 启用写缓冲
-	EnableWriterBuffer bool
 	// 写缓冲大小，默认4096字节
 	WriterBufferSize int
 	// 以json格式输出
