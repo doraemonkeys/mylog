@@ -8,4 +8,4 @@ require github.com/sirupsen/logrus v1.9.3
 
 require golang.org/x/sys v0.21.0
 
-require github.com/doraemonkeys/doraemon v0.4.2
+require github.com/doraemonkeys/doraemon v0.4.3

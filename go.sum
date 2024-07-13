@@ -6,6 +6,8 @@ github.com/doraemonkeys/doraemon v0.4.1 h1:UvjiMSCWRBatI4uMUfO3nh3NIxmIngYkofJZx
 github.com/doraemonkeys/doraemon v0.4.1/go.mod h1:zCQqIPfjObnKoGqK1YH3IcwCtGHk3S1PFDCn/D/kzVg=
 github.com/doraemonkeys/doraemon v0.4.2 h1:57lEmrnE06sty3bBVmE9Ohiq4exKO5mJ5lLmKmlejiE=
 github.com/doraemonkeys/doraemon v0.4.2/go.mod h1:2dWvJ0260Xg73XTaBXyH7zNM/ohpUNZvPPFs2piqdTQ=
+github.com/doraemonkeys/doraemon v0.4.3 h1:xyQGWT3ryrV3XEJsQm64wjxH3X+GNEptUz9OneUte2w=
+github.com/doraemonkeys/doraemon v0.4.3/go.mod h1:2dWvJ0260Xg73XTaBXyH7zNM/ohpUNZvPPFs2piqdTQ=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
