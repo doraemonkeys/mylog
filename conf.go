@@ -272,6 +272,7 @@ func (hook *logHook) bufferFlusher() {
 	}
 }
 
+// Deprecated: You don't need to call this function now.
 func FlushBuf(logger *logrus.Logger) error {
 	if logger == nil {
 		return nil
