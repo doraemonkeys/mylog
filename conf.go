@@ -15,12 +15,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// 默认日志文件夹路径。
+// Default log folder path.
 //
-// 开启日志最大保留天数后，如果没有设置日志文件夹路径，则默认为此路径。
+// After enabling the maximum retention days for logs, if the log folder path is not set, it defaults to this path.
 const DefaultSavePath = "./logs"
 
-// 日志级别
+// logrus level
 const (
 	PanicLevel = "panic"
 	FatalLevel = "fatal"
@@ -31,67 +31,66 @@ const (
 	TraceLevel = "trace"
 )
 
-// 日志配置,可以为空
 type LogConfig struct {
-	//日志保存文件夹路径(可以为空)
+	// Path for log storage.
 	LogDir string
-	//日志文件名后缀
+	// Log file name suffix
 	LogFileNameSuffix string
-	//默认日志文件名(若按日期或大小分割日志，此项无效)
+	// Default log file name (ignored if split by date or size)
 	DefaultLogName string
-	//是否分离错误日志(Error级别以上)
+	// Separate error logs (for Error level and above)
 	ErrSeparate bool
-	//使普通日志文件不包含错误日志(分离错误日志时有效)
+	// Exclude error logs from normal log file (when errors are separated)
 	ErrNotInNormal bool
-	//按日期分割日志(不能和按大小分割同时使用)
+	// Split logs by date (cannot be used with size split)
 	DateSplit bool
-	//取消日志输出到文件
+	// Disable file output for logs
 	LogFileDisable bool
-	//取消日志输出到控制台
+	// Disable console output for logs
 	NoConsole bool
-	//取消时间戳Timestamp
+	// Disable timestamp in logs
 	NoTimestamp bool
-	// 时间戳格式，默认 2006-01-02 15:04:05.000
+	// Timestamp format, default is 2006-01-02 15:04:05.000
 	TimestampFormat string
-	//在控制台输出shortfile
+	// Show short file path in console output
 	ShowShortFileInConsole bool
-	//在控制台输出func
+	// Show function name in console output
 	ShowFuncInConsole bool
-	// 关闭调用者信息
+	// Disable caller information
 	DisableCaller bool
-	// 禁用写缓冲
+	// Disable write buffer
 	DisableWriterBuffer bool
-	// 写缓冲大小，默认4096字节
+	// Write buffer size, default is 4096 bytes
 	WriterBufferSize int
-	// 以json格式输出
+	// Output in JSON format
 	JSONFormat bool
-	// 禁用颜色
+	// Disable color output
 	DisableColors bool
 	// Disables the truncation of the level text to 4 characters.
 	DisableLevelTruncation bool
 	// PadLevelText Adds padding the level text so that all the levels
 	// output at the same length PadLevelText is a superset of the DisableLevelTruncation option
 	PadLevelText bool
-	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
+	// Split logs by size in bytes (cannot be used with date split)
 	MaxLogSize int64
-	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
-	// 开启此功能后，如果没有设置日志文件夹路径，则默认为DefaultSavePath。
+	// Maximum retention days for logs. After enabling this, if the log folder path is not set, it defaults to DefaultSavePath.
+	// Please do not place other files in the log folder, otherwise they may be deleted.
 	MaxKeepDays int
-	//日志扩展名(默认.log)
+	// Log file extension (default is .log)
 	LogExt string
-	//panic,fatal,error,warn,info,debug,trace
+	// Log level (panic, fatal, error, warn, info, debug, trace)
 	LogLevel string
-	//时区
+	// Time zone
 	TimeLocation *time.Location
-	//在每条log末尾添加key-value
+	// Key for appending to each log entry
 	key string
-	//在每条log末尾添加key-value
+	// Value for appending to each log entry
 	value interface{}
-	// 标记不被删除的日志文件名需要含有的后缀
+	// Suffix for log files that should not be deleted
 	keepSuffix string
 }
 
-// 在每条log末尾添加key-value
+// SetKeyValue sets the key and value for appending to each log entry.
 func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 	c.key = key
 	c.value = value
@@ -250,7 +249,6 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	return nil
 }
 
-// 刷新缓冲区
 func (hook *logHook) bufferFlusher() {
 	for {
 		lines := hook.bufferQueue.WaitPopAll()
@@ -310,7 +308,7 @@ func FlushBuf(logger *logrus.Logger) error {
 	return nil
 }
 
-// 删除n天前的日志，n等于0时删除所有日志。
+// Delete n days old logs, n equals 0 to delete all logs.
 func DeleteOldLog(logger *logrus.Logger, n int) error {
 	if logger == nil {
 		return nil

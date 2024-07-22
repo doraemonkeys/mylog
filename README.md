@@ -1,6 +1,6 @@
 # mylog
 
-一个基于logrus的日志库，实现了各种定制化配置。
+A log library based on Logrus that implements various custom configurations.
 
 
 
@@ -24,9 +24,9 @@ func init() {
 	config := mylog.LogConfig{
 		LogDir:             `./test_log`,
 		LogLevel:            "trace",
-		ErrSeparate:         true, //错误日志是否单独输出到文件
-		DateSplit:           true, //是否按日期分割日志
-		MaxKeepDays:         1,
+		ErrSeparate:         true, // Whether the error log is output to a separate file.
+		DateSplit:           true, // Whether to split the log by date.
+		MaxKeepDays:         1,   // The maximum number of days to keep the log.
 	}
 	config.SetKeyValue("foo", "bar")
 	err := mylog.InitGlobalLogger(config)
@@ -46,63 +46,65 @@ func main() {
 
 
 
-## 配置预览
+## Configuration Options
 
 ```go
 type LogConfig struct {
-	//日志保存文件夹路径(可以为空)
+	// Path for log storage.
 	LogDir string
-	//日志文件名后缀
+	// Log file name suffix
 	LogFileNameSuffix string
-	//默认日志文件名(若按日期或大小分割日志，此项无效)
+	// Default log file name (ignored if split by date or size)
 	DefaultLogName string
-	//是否分离错误日志(Error级别以上)
+	// Separate error logs (for Error level and above)
 	ErrSeparate bool
-	//使普通日志文件不包含错误日志(分离错误日志时有效)
+	// Exclude error logs from normal log file (when errors are separated)
 	ErrNotInNormal bool
-	//按日期分割日志(不能和按大小分割同时使用)
+	// Split logs by date (cannot be used with size split)
 	DateSplit bool
-	//取消日志输出到文件
+	// Disable file output for logs
 	LogFileDisable bool
-	//取消日志输出到控制台
+	// Disable console output for logs
 	NoConsole bool
-	//取消时间戳Timestamp
+	// Disable timestamp in logs
 	NoTimestamp bool
-	// 时间戳格式，默认 2006-01-02 15:04:05.000
+	// Timestamp format, default is 2006-01-02 15:04:05.000
 	TimestampFormat string
-	//在控制台输出shortfile
+	// Show short file path in console output
 	ShowShortFileInConsole bool
-	//在控制台输出func
+	// Show function name in console output
 	ShowFuncInConsole bool
-	// 关闭调用者信息
+	// Disable caller information
 	DisableCaller bool
-	// 写缓冲大小，默认4096字节
+	// Disable write buffer
+	DisableWriterBuffer bool
+	// Write buffer size, default is 4096 bytes
 	WriterBufferSize int
-	// 以json格式输出
+	// Output in JSON format
 	JSONFormat bool
-	// 禁用颜色
+	// Disable color output
 	DisableColors bool
 	// Disables the truncation of the level text to 4 characters.
 	DisableLevelTruncation bool
 	// PadLevelText Adds padding the level text so that all the levels
 	// output at the same length PadLevelText is a superset of the DisableLevelTruncation option
 	PadLevelText bool
-	//按大小分割日志,单位byte。(不能和按日期分割同时使用)
+	// Split logs by size in bytes (cannot be used with date split)
 	MaxLogSize int64
-	// 日志最大保留天数，设置后请不要在日志文件夹中放置其他文件，否则可能被删除。
-	// 开启此功能后，如果没有设置日志文件夹路径，则默认为DefaultSavePath。
+	// Maximum retention days for logs. After enabling this, if the log folder path is not set, it defaults to DefaultSavePath.
+	// Please do not place other files in the log folder, otherwise they may be deleted.
 	MaxKeepDays int
-	//日志扩展名(默认.log)
+	// Log file extension (default is .log)
 	LogExt string
-	//panic,fatal,error,warn,info,debug,trace
+	// Log level (panic, fatal, error, warn, info, debug, trace)
 	LogLevel string
-	//时区
+	// Time zone
 	TimeLocation *time.Location
-	//在每条log末尾添加key-value
+	// Key for appending to each log entry
 	key string
-	//在每条log末尾添加key-value
+	// Value for appending to each log entry
 	value interface{}
-	// 标记不被删除的日志文件名需要含有的后缀
+	// Suffix for log files that should not be deleted
 	keepSuffix string
 }
 ```
