@@ -382,9 +382,12 @@ func (hook *logHook) tryOpenTwoOldLogFile(errorFileName, commonFileName string) 
 }
 
 func (hook *logHook) deleteOldLogTimer() {
-	for {
+	hook.deleteOldLogOnce(hook.LogConfig.MaxKeepDays)
+
+	ticker := time.NewTicker(time.Hour * 24)
+	defer ticker.Stop()
+	for range ticker.C {
 		hook.deleteOldLogOnce(hook.LogConfig.MaxKeepDays)
-		time.Sleep(time.Hour * 24)
 	}
 }
 
