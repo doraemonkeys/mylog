@@ -2,27 +2,13 @@ package mylog
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
-
-// 文件夹是否存在
-func DirIsExist(path string) bool {
-	f, err := os.Stat(path)
-	if err != nil {
-		return os.IsExist(err)
-	}
-	if f.IsDir() {
-		return true
-	}
-	return false
-}
 
 // D:\xxx\yyy\yourproject\pkg\log\log.go -> log\log.go:123
 func getShortFileName(file string, lineInfo string) string {
@@ -195,57 +181,4 @@ func timeStringCompare(time1, time2, format string) int {
 		return -1
 	}
 	return 0
-}
-
-// 仅在有写入时才创建文件
-type lazyFileWriter struct {
-	filePath string
-	file     *os.File
-	once     *sync.Once
-}
-
-func (w *lazyFileWriter) Write(p []byte) (n int, err error) {
-	w.once.Do(func() {
-		w.file, err = os.OpenFile(w.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			logrus.Errorf("open file error:%v", err)
-		}
-	})
-	return w.file.Write(p)
-}
-
-func (w *lazyFileWriter) Close() error {
-	f := w.file
-	if f != nil {
-		w.file = nil
-		return f.Close()
-	}
-	return nil
-}
-
-func (w *lazyFileWriter) Seek(offset int64, whence int) (int64, error) {
-	if w.file == nil {
-		return 0, errors.New("file not created")
-	}
-	return w.file.Seek(offset, whence)
-}
-
-// Name returns the name of the file as presented to Open.
-func (w *lazyFileWriter) Name() string {
-	if w.file != nil {
-		return w.file.Name()
-	}
-	return filepath.Base(w.filePath)
-}
-
-// 是否已经创建了文件
-func (w *lazyFileWriter) IsCreated() bool {
-	return w.file != nil
-}
-func (w *lazyFileWriter) File() *os.File {
-	return w.file
-}
-
-func newLazyFileWriter(filePath string) *lazyFileWriter {
-	return &lazyFileWriter{filePath: filePath, once: &sync.Once{}}
 }

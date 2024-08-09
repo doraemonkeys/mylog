@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/doraemonkeys/doraemon"
+	mpmc "github.com/doraemonkeys/fast-mpmc"
 	myformatter "github.com/doraemonkeys/mylog/formatter"
 	"github.com/sirupsen/logrus"
 )
@@ -98,7 +99,7 @@ func (c *LogConfig) SetKeyValue(key string, value interface{}) {
 
 type logHook struct {
 	// 写入文件的操作是线程安全的
-	ErrWriter *lazyFileWriter
+	ErrWriter *doraemon.LazyFileWriter
 	// 写入文件的操作是线程安全的
 	OtherWriter *os.File
 	// bufio 并发不安全，只在一个goroutine中写入
@@ -110,7 +111,7 @@ type logHook struct {
 
 	// LastBufferWroteTime time.Time
 
-	bufferQueue *doraemon.SimpleMQ[[]byte]
+	bufferQueue *mpmc.FastMpmc[[]byte]
 	LogConfig   LogConfig
 	// 2006_01_02
 	FileDate string
@@ -221,7 +222,7 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 	config.keepSuffix = "keep"
 
 	hook := &logHook{}
-	hook.bufferQueue = doraemon.NewSimpleMQ[[]byte](10)
+	hook.bufferQueue = mpmc.NewFastMpmc[[]byte](10)
 	hook.dateFmt = "2006_01_02"
 	hook.dateFmt2 = "2006_01_02_150405"
 	hook.FileDate = time.Now().In(config.TimeLocation).Format(hook.dateFmt)

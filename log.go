@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/doraemonkeys/doraemon"
 	"github.com/sirupsen/logrus"
 )
 
@@ -186,7 +187,7 @@ func (hook *logHook) updateNewLogPathAndFile() error {
 
 	// 检查日志目录是否存在
 	if hook.LogConfig.LogDir != "" {
-		if !DirIsExist(hook.LogConfig.LogDir) {
+		if !doraemon.DirIsExist(hook.LogConfig.LogDir).IsTrue() {
 			err := os.MkdirAll(hook.LogConfig.LogDir, 0755)
 			if err != nil {
 				return err
@@ -236,7 +237,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 	commonFileName = filepath.Join(newPath, commonFileName)
 
 	var (
-		lazyFile *lazyFileWriter
+		lazyFile *doraemon.LazyFileWriter
 		file2    *os.File
 		ok       bool
 		err      error
@@ -250,7 +251,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 		if err != nil {
 			return err
 		}
-		lazyFile = newLazyFileWriter(errorFileName)
+		lazyFile = doraemon.NewLazyFileWriter(errorFileName)
 		file2, err = os.OpenFile(commonFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			return err
@@ -259,7 +260,7 @@ func (hook *logHook) openTwoLogFile(tempFileName string) error {
 
 	hook.ErrWriter = lazyFile
 	if lazyFile.IsCreated() {
-		hook.LogSize, _ = lazyFile.Seek(0, io.SeekEnd)
+		hook.LogSize, _ = lazyFile.File().Seek(0, io.SeekEnd)
 	} else {
 		hook.LogSize = 0
 	}
@@ -343,7 +344,7 @@ func (hook *logHook) tryOpenOldLogFile(newFileName string) (*os.File, error) {
 	return os.OpenFile(newFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 }
 
-func (hook *logHook) tryOpenTwoOldLogFile(errorFileName, commonFileName string) (*lazyFileWriter, *os.File, bool, error) {
+func (hook *logHook) tryOpenTwoOldLogFile(errorFileName, commonFileName string) (*doraemon.LazyFileWriter, *os.File, bool, error) {
 	if hook.LogConfig.MaxLogSize == 0 {
 		return nil, nil, false, nil
 	}
@@ -373,7 +374,7 @@ func (hook *logHook) tryOpenTwoOldLogFile(errorFileName, commonFileName string) 
 		errorFileName = filepath.Join(hook.LogConfig.LogDir, latestFolder, filepath.Base(errorFileName))
 		commonFileName = filepath.Join(hook.LogConfig.LogDir, latestFolder, filepath.Base(commonFileName))
 	}
-	file := newLazyFileWriter(errorFileName)
+	file := doraemon.NewLazyFileWriter(errorFileName)
 	file2, err := os.OpenFile(commonFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, nil, false, err
