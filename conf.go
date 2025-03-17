@@ -260,7 +260,7 @@ func (hook *logHook) bufferFlusher() {
 				fmt.Fprintln(os.Stderr, "bufferFlusher Write err:", err)
 			}
 		}
-		if hook.bufferQueue.IsEmptyNoLock() {
+		if hook.bufferQueue.IsEmpty() {
 			err := hook.OtherBufWriter.Flush()
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "flushBuffer err:", err)

@@ -1,16 +1,37 @@
 # mylog
 
-A log library based on Logrus that implements various custom configurations.
+A log library based on Logrus and Zap that implements various custom configurations.
 
 
 
 ## QuickStart
 
+### Install
+
 ```
 go get -u github.com/doraemonkeys/mylog
 ```
 
+### zap
 
+```go
+package main
+
+import (
+	mylog "github.com/doraemonkeys/mylog/zap"
+	"go.uber.org/zap"
+)
+
+func main() {
+	logger := mylog.NewBuilder().Build()
+	logger.Info("hello world", zap.String("name", "doraemon"))
+	logger.Error("error")
+	logger.Warn("warn")
+	logger.Debug("debug")
+}
+```
+
+### Logrus
 
 ```go
 package main
