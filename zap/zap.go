@@ -49,6 +49,9 @@ type ZapBuilder struct {
 	stacktraceLevel zapcore.Level
 	// callerSkip
 	callerSkip int
+
+	// enable standard error output
+	// enableStdErr bool
 }
 
 // ReplaceGlobals replaces the global Logger and SugaredLogger, and returns a function to restore the original values. It's safe for concurrent use.
