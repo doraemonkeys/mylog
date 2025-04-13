@@ -6,13 +6,12 @@ A log library based on Logrus and Zap that implements various custom configurati
 
 ## QuickStart
 
-### Install
-
-```
-go get -u github.com/doraemonkeys/mylog
-```
 
 ### zap
+
+```
+go get -u github.com/doraemonkeys/mylog/zap
+```
 
 ```go
 package main
@@ -32,6 +31,10 @@ func main() {
 ```
 
 ### Logrus
+
+```
+go get -u github.com/doraemonkeys/mylog
+```
 
 ```go
 package main

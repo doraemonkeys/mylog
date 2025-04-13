@@ -12,10 +12,8 @@ import (
 )
 
 type ZapBuilder struct {
-	// Path for log storage.
-	logDir string
-	// Default log file name
-	defaultLogName string
+	// Default log path
+	logPath string
 	// Disable separate error logs (for Error level and above)
 	noErrSeparate bool
 	// Disable file output for logs
@@ -35,8 +33,6 @@ type ZapBuilder struct {
 	jsonFormatFile bool
 	// Output in JSON format for console
 	jsonFormatConsole bool
-	// Log file extension (default is .log)
-	logFileExt string
 	// maxLogSizeMB is the maximum size in megabytes of the log file before it gets rotated. It defaults to 100 megabytes.
 	maxLogSizeMB int
 	// Maximum retention days for logs.
@@ -61,9 +57,7 @@ func ReplaceGlobals(logger *zap.Logger) func() {
 
 func NewBuilder() *ZapBuilder {
 	return &ZapBuilder{
-		logDir:          "./logs",
-		logFileExt:      ".log",
-		defaultLogName:  "default",
+		logPath:         "./logs/default.log",
 		timeLocation:    time.Local,
 		logLevel:        zapcore.InfoLevel,
 		stacktraceLevel: zapcore.FatalLevel,
@@ -71,18 +65,8 @@ func NewBuilder() *ZapBuilder {
 	}
 }
 
-func (b *ZapBuilder) LogDir(logDir string) *ZapBuilder {
-	b.logDir = logDir
-	return b
-}
-
-func (b *ZapBuilder) DefaultLogName(defaultLogName string) *ZapBuilder {
-	b.defaultLogName = defaultLogName
-	return b
-}
-
-func (b *ZapBuilder) LogFileExt(logExt string) *ZapBuilder {
-	b.logFileExt = logExt
+func (b *ZapBuilder) LogPath(logPath string) *ZapBuilder {
+	b.logPath = logPath
 	return b
 }
 
@@ -252,7 +236,7 @@ func (b *ZapBuilder) buildFileCore() zapcore.Core {
 	}
 
 	// Create normal log file
-	normalLogPath := filepath.Join(b.logDir, b.defaultLogName+b.logFileExt)
+	normalLogPath := b.logPath
 	normalLogWriter := &lumberjack.Logger{
 		Filename:   normalLogPath,
 		MaxSize:    b.maxLogSizeMB, // MB
@@ -269,7 +253,10 @@ func (b *ZapBuilder) buildFileCore() zapcore.Core {
 	}
 
 	// Create error log file
-	errorLogPath := filepath.Join(b.logDir, b.defaultLogName+".error"+b.logFileExt)
+	logName := strings.TrimSuffix(filepath.Base(b.logPath), filepath.Ext(b.logPath))
+	errorLogPath := filepath.Join(filepath.Dir(b.logPath),
+		logName+".error"+filepath.Ext(b.logPath),
+	)
 	errorLogWriter := &lumberjack.Logger{
 		Filename:   errorLogPath,
 		MaxSize:    b.maxLogSizeMB, // MB
@@ -327,27 +314,6 @@ func (b *ZapBuilder) buildConsoleCore() zapcore.Core {
 	// Create console output
 	consoleWriteSyncer := zapcore.Lock(os.Stdout)
 	return zapcore.NewCore(encoder, consoleWriteSyncer, b.logLevel)
-}
-
-func ParseLevel(levelStr string) zapcore.Level {
-	switch strings.ToLower(levelStr) {
-	case "debug":
-		return zapcore.DebugLevel
-	case "info":
-		return zapcore.InfoLevel
-	case "warn", "warning":
-		return zapcore.WarnLevel
-	case "error":
-		return zapcore.ErrorLevel
-	case "dpanic":
-		return zapcore.DPanicLevel
-	case "panic":
-		return zapcore.PanicLevel
-	case "fatal":
-		return zapcore.FatalLevel
-	default:
-		return zapcore.InfoLevel
-	}
 }
 
 func (b *ZapBuilder) getTimeEncoder() zapcore.TimeEncoder {
