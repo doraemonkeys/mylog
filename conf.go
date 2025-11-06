@@ -185,6 +185,8 @@ func initlLog(logger *logrus.Logger, config LogConfig) error {
 			// 	}
 			// 	return "", fmt.Sprintf("%s:%s():%d:", shortFile, f.Function, f.Line)
 			// },
+
+			// 禁用自带的file和func字段，
 			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 				return "", ""
 			},
@@ -260,7 +262,7 @@ func (hook *logHook) bufferFlusher() {
 				fmt.Fprintln(os.Stderr, "bufferFlusher Write err:", err)
 			}
 		}
-		if hook.bufferQueue.IsEmpty() {
+		if hook.bufferQueue.LenNoLock() == 0 {
 			err := hook.OtherBufWriter.Flush()
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "flushBuffer err:", err)

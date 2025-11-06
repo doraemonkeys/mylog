@@ -12,13 +12,18 @@ import (
 
 // D:\xxx\yyy\yourproject\pkg\log\log.go -> log\log.go:123
 func getShortFileName(file string, lineInfo string) string {
-	file = strings.Replace(file, "\\", "/", -1)
+	if file == "" {
+		return lineInfo
+	}
+	file = strings.ReplaceAll(file, "\\", "/")
 	n := 0
 	for i := len(file) - 1; i >= 0; i-- {
 		if file[i] == '/' {
 			n++
 			if n >= 2 {
-				file = file[i+1:]
+				if i+1 < len(file) {
+					file = file[i+1:]
+				}
 				break
 			}
 		}

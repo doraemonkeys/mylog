@@ -22,8 +22,12 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	if !hook.LogConfig.DisableCaller && entry.Caller != nil {
 		file := entry.Caller.File
 		file = getShortFileName(file, fmt.Sprint(entry.Caller.Line))
+		funcName := entry.Caller.Function
+		if idx := strings.LastIndex(funcName, "."); idx != -1 {
+			funcName = funcName[idx+1:]
+		}
 		entry.Data["FILE"] = file
-		entry.Data["FUNC"] = entry.Caller.Function[strings.LastIndex(entry.Caller.Function, ".")+1:]
+		entry.Data["FUNC"] = funcName
 
 		if !hook.LogConfig.ShowShortFileInConsole {
 			defer delete(entry.Data, "FILE")

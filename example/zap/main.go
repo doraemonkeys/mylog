@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	logger := mylog.NewBuilder().Build()
+	logger := mylog.NewBuilder().Level(zap.DebugLevel).Build()
 	logger.Info("hello world", zap.String("name", "doraemon"))
 	logger.Error("error")
 	logger.Warn("warn")
